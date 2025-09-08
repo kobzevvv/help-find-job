@@ -38,7 +38,7 @@ Thank you for your interest in contributing to the Telegram Resume Matcher Bot! 
    #### **Option B: Full Development Setup**
    ```bash
    # Create your own development bot
-   cp env.template .env
+   cp .env.example .env
    # Edit .env with your personal bot credentials
    wrangler login
    npm run deploy:dev
@@ -289,6 +289,49 @@ We are committed to providing a welcoming and inclusive environment for all cont
 - Focus on constructive feedback
 - Respect different viewpoints and experiences
 - Show empathy towards others
+
+## 🔍 Debugging and Admin Commands
+
+### Admin Access for Debugging
+
+The bot includes simple admin commands for monitoring and debugging:
+
+```bash
+# View recent logs (ask maintainer for password)
+/get_last_10_messages <password>
+/get_last_100_messages <password>
+
+# Get log summary
+/log_summary <password>
+```
+
+**How it works:**
+- 🔑 **No login sessions** - just command + password
+- 📊 **D1 database logging** - all interactions tracked
+- 🚫 **No persistent state** - clean and simple
+- 🔍 **Real-time debugging** - perfect for troubleshooting
+
+### Development Debugging
+
+```bash
+# View worker logs in real-time
+wrangler tail --env development
+
+# Check webhook status
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
+
+# Test D1 database
+wrangler d1 execute telegram-bot-logs --command "SELECT * FROM user_logs LIMIT 10"
+```
+
+### Testing with Staging Bot
+
+The staging bot [@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot) is perfect for testing:
+
+1. **Deploy your changes**: `npm run deploy:dev` 
+2. **Test the bot**: Send `/start` to check basic functionality
+3. **Check logs**: Use admin commands to see what's happening
+4. **Iterate**: Make changes and redeploy
 
 ## 🎯 Development Tips
 
