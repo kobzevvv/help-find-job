@@ -464,7 +464,9 @@ ${analysis.summary}
    * Simple password check for admin commands
    */
   private checkPassword(password: string): boolean {
-    return password === this.adminPassword;
+    const isValid = password === this.adminPassword;
+    console.log(`[DEBUG] Password check: provided="${password}", expected="${this.adminPassword}", valid=${isValid}`);
+    return isValid;
   }
 
   /**
@@ -485,6 +487,8 @@ ${analysis.summary}
    */
   private async handleSimpleLogCommand(fullText: string, chatId: number, userId: number, limit: number): Promise<void> {
     try {
+      console.log(`[DEBUG] Admin command: ${fullText}, environment: ${this.environment}, adminPassword: ${this.adminPassword}`);
+      
       // Parse command: /get_last_10_messages password
       const parts = fullText.trim().split(/\s+/);
       const password = parts[1];
