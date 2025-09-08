@@ -80,6 +80,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const botUsername = 'job_search_help_staging_bot';
             const stagingUrl = 'https://help-with-job-search-telegram-bot-staging.workers.dev';
