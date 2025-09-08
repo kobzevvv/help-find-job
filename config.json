@@ -1,0 +1,107 @@
+{
+  "project": {
+    "name": "telegram-resume-matcher",
+    "version": "1.0.0",
+    "description": "AI-powered Telegram bot for resume-job matching analysis"
+  },
+  "workers": {
+    "development": {
+      "name": "help-with-job-search-telegram-bot-dev",
+      "description": "Development environment for help with job search telegram bot"
+    },
+    "staging": {
+      "name": "help-with-job-search-telegram-bot-staging", 
+      "description": "Staging environment for help with job search telegram bot"
+    },
+    "production": {
+      "name": "help-with-job-search-telegram-bot",
+      "description": "Production environment for help with job search telegram bot"
+    }
+  },
+  "application": {
+    "defaults": {
+      "sessionTimeoutHours": 24,
+      "maxFileSizeMB": 10,
+      "rateLimitPerMinute": 10,
+      "debugLogging": false,
+      "enableAnalytics": true
+    },
+    "development": {
+      "sessionTimeoutHours": 1,
+      "maxFileSizeMB": 5,
+      "rateLimitPerMinute": 20,
+      "debugLogging": true,
+      "enableAnalytics": false
+    },
+    "staging": {
+      "sessionTimeoutHours": 24,
+      "maxFileSizeMB": 10,
+      "rateLimitPerMinute": 15,
+      "debugLogging": true,
+      "enableAnalytics": true
+    },
+    "production": {
+      "sessionTimeoutHours": 24,
+      "maxFileSizeMB": 10,
+      "rateLimitPerMinute": 10,
+      "debugLogging": false,
+      "enableAnalytics": true
+    }
+  },
+  "ai": {
+    "defaults": {
+      "model": "gpt-4",
+      "maxTokens": 1500,
+      "temperature": 0.3,
+      "requestTimeoutSeconds": 30,
+      "parallelRequests": true,
+      "maxRetryAttempts": 3
+    }
+  },
+  "localization": {
+    "defaultLanguage": "en",
+    "supportedLanguages": ["en", "ru"],
+    "fallbackLanguage": "en"
+  },
+  "features": {
+    "experimentalFeatures": false,
+    "fileFormatDetection": true,
+    "conversationHistory": false,
+    "feedbackCollection": true,
+    "multipleSessionsPerUser": false
+  },
+  "performance": {
+    "kvCacheTTLSeconds": 86400,
+    "documentProcessingTimeoutSeconds": 15,
+    "maxConcurrentSessions": 1000
+  },
+  "security": {
+    "maxSessionsPerUser": 1,
+    "webhookValidation": true,
+    "inputSanitization": true,
+    "rateLimiting": true
+  },
+  "admin": {
+    "development": {
+      "authRequired": false,
+      "openAccess": true,
+      "sessionTimeoutHours": 24,
+      "maxLoginAttempts": 5,
+      "loginCooldownMinutes": 5
+    },
+    "staging": {
+      "authRequired": true,
+      "openAccess": false,
+      "sessionTimeoutHours": 24,
+      "maxLoginAttempts": 5,
+      "loginCooldownMinutes": 10
+    },
+    "production": {
+      "authRequired": true,
+      "openAccess": false,
+      "sessionTimeoutHours": 24,
+      "maxLoginAttempts": 3,
+      "loginCooldownMinutes": 15
+    }
+  }
+}

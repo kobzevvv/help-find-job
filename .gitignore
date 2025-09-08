@@ -1,0 +1,304 @@
+# =============================================================================
+# Telegram Resume Matcher Bot - Git Ignore Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Environment and Configuration Files
+# -----------------------------------------------------------------------------
+
+# Environment files with secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Wrangler secrets and state
+.wrangler/
+wrangler.toml.bak
+
+# Local configuration overrides
+config.local.json
+secrets.json
+
+# -----------------------------------------------------------------------------
+# Dependencies and Build Output
+# -----------------------------------------------------------------------------
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+.output/
+.cache/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Development Tools
+# -----------------------------------------------------------------------------
+
+# IDE and Editor files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# -----------------------------------------------------------------------------
+# Testing and Coverage
+# -----------------------------------------------------------------------------
+
+# Jest coverage reports
+coverage/
+.nyc_output/
+*.lcov
+
+# Test results
+test-results/
+junit.xml
+
+# E2E test artifacts
+playwright-report/
+test-results/
+
+# -----------------------------------------------------------------------------
+# Logs and Temporary Files
+# -----------------------------------------------------------------------------
+
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# -----------------------------------------------------------------------------
+# Cloudflare Workers Specific
+# -----------------------------------------------------------------------------
+
+# Wrangler generated files
+worker.js
+worker.js.map
+
+# KV namespace data (local development)
+.kv-data/
+
+# Local miniflare data
+.mf/
+
+# Cloudflare analytics data
+.cf-analytics/
+
+# -----------------------------------------------------------------------------
+# Documentation and Assets
+# -----------------------------------------------------------------------------
+
+# Generated documentation
+docs/build/
+.docusaurus/
+
+# Asset processing
+.parcel-cache/
+.next/
+out/
+
+# -----------------------------------------------------------------------------
+# AI and ML Specific
+# -----------------------------------------------------------------------------
+
+# Model files (if any)
+*.pkl
+*.joblib
+*.h5
+*.pb
+
+# Training data (if any)
+training-data/
+models/
+
+# -----------------------------------------------------------------------------
+# Deployment and CI/CD
+# -----------------------------------------------------------------------------
+
+# Docker files (development)
+docker-compose.override.yml
+.docker/
+
+# Kubernetes secrets
+k8s-secrets.yaml
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# GitHub Actions artifacts
+.github/workflows/*.local.yml
+
+# -----------------------------------------------------------------------------
+# Security and Monitoring
+# -----------------------------------------------------------------------------
+
+# Security scan results
+.snyk
+.semgrep/
+
+# Audit logs
+audit.log
+security.log
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.p12
+
+# -----------------------------------------------------------------------------
+# Database and Storage
+# -----------------------------------------------------------------------------
+
+# SQLite databases (local development)
+*.db
+*.sqlite
+*.sqlite3
+
+# Database dumps
+*.sql.dump
+
+# File uploads (development)
+uploads/
+user-files/
+
+# -----------------------------------------------------------------------------
+# Package Manager Specific
+# -----------------------------------------------------------------------------
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# PNPM
+.pnpm-store/
+
+# -----------------------------------------------------------------------------
+# Language Specific
+# -----------------------------------------------------------------------------
+
+# TypeScript
+*.d.ts.map
+
+# JavaScript
+*.min.js
+*.min.js.map
+
+# -----------------------------------------------------------------------------
+# Project Specific
+# -----------------------------------------------------------------------------
+
+# User uploaded documents (development)
+temp-resumes/
+temp-job-posts/
+
+# Analysis results cache
+analysis-cache/
+
+# User session data (local development)
+sessions/
+
+# Test telegram bot data
+test-bot-data/
+
+# Development utilities
+dev-utils/
+scripts/local/
+
+# Performance benchmarks
+benchmarks/
+
+# -----------------------------------------------------------------------------
+# Archive and Backup Files
+# -----------------------------------------------------------------------------
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Version control backups
+*.orig
+
+# =============================================================================
+# Allow Specific Files (Override above rules)
+# =============================================================================
+
+# Keep example and template files
+!.env.example
+!.env.staging
+!config.json
+!wrangler.toml
+
+# Keep important config templates
+!scripts/example/
+!docs/examples/
+
+# Keep test fixtures
+!tests/fixtures/
+!tests/data/
+
+# =============================================================================
+# Comments for Contributors
+# =============================================================================
+
+# This .gitignore file is designed to:
+# 1. Protect sensitive information (API keys, tokens, secrets)
+# 2. Exclude build artifacts and dependencies
+# 3. Ignore development-specific files
+# 4. Keep the repository clean and focused
+# 5. Maintain security best practices
+#
+# When adding new ignore patterns:
+# - Group them logically in the appropriate section
+# - Add comments explaining why files are ignored
+# - Consider both development and production scenarios
+# - Test that important files are not accidentally ignored

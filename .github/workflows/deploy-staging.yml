@@ -1,0 +1,90 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging Environment
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Deploy to Cloudflare Workers (Staging)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env staging
+        env:
+          # Public staging bot token - safe to expose for testing
+          TELEGRAM_BOT_TOKEN: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET_STAGING }}
+
+      - name: Set staging webhook
+        if: success()
+        run: |
+          curl -X POST "https://api.telegram.org/bot8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI/setWebhook" \
+            -H "Content-Type: application/json" \
+            -d '{"url": "https://help-with-job-search-telegram-bot-staging.workers.dev/webhook"}'
+
+      - name: Comment PR with staging bot info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const botUsername = 'job_search_help_staging_bot';
+            const stagingUrl = 'https://help-with-job-search-telegram-bot-staging.workers.dev';
+            
+            const comment = `## 🤖 Staging Deployment Ready!
+            
+            Your changes have been deployed to the staging environment:
+            
+            **🔗 Test the bot**: [@${botUsername}](https://t.me/${botUsername})
+            **🌐 Worker URL**: ${stagingUrl}
+            **📊 Health check**: ${stagingUrl}/health
+            
+            ### Testing Instructions:
+            1. Open [@${botUsername}](https://t.me/${botUsername}) in Telegram
+            2. Send \`/start\` or \`/resume_and_job_post_match\` 
+            3. Test your changes with sample resume and job posting
+            4. Report any issues in this PR
+            
+            > 💡 **Note**: This is a shared staging environment for all developers to test features safely.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Update README with deployment status
+        if: github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('✅ Staging deployment completed successfully');
+            console.log('🤖 Staging bot: @job_search_help_staging_bot');
+            console.log('🌐 Staging URL: https://help-with-job-search-telegram-bot-staging.workers.dev');

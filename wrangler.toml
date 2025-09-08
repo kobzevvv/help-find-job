@@ -1,0 +1,215 @@
+# =============================================================================
+# Telegram Resume Matcher Bot - Cloudflare Workers Configuration
+# =============================================================================
+# 
+# This file contains only deployment and infrastructure configuration.
+# Application settings are in config.json
+# Secrets are in .env (see env.template)
+# =============================================================================
+
+name = "help-with-job-search-telegram-bot"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# TypeScript support - wrangler will handle compilation automatically
+
+# =============================================================================
+# Development Environment
+# =============================================================================
+
+[env.development]
+name = "help-with-job-search-telegram-bot-dev"
+workers_dev = true
+
+# KV Namespaces for development
+# Run: wrangler kv:namespace create "SESSIONS" --env development
+# Then replace the IDs below with the generated ones
+[[env.development.kv_namespaces]]
+binding = "SESSIONS"
+id = "a93feb9ab1404806ad4649d05de50947"
+
+[[env.development.kv_namespaces]]
+binding = "CACHE"
+id = "9f2927ee052e4cdd87259c702063d3fd"
+
+# D1 Database for logging
+[[env.development.d1_databases]]
+binding = "LOGS_DB"
+database_name = "telegram-bot-logs"
+database_id = "f393809f-9a96-4fab-9e61-695b3331f962"
+
+# Environment identifier
+[env.development.vars]
+ENVIRONMENT = "development"
+
+# =============================================================================
+# Staging Environment  
+# =============================================================================
+
+[env.staging]
+name = "help-with-job-search-telegram-bot-staging"
+workers_dev = true
+
+# Custom domain for staging (optional)
+# route = "staging-bot.yourdomain.com/*"
+
+# KV Namespaces for staging
+# Run: wrangler kv namespace create "SESSIONS" --env staging
+[[env.staging.kv_namespaces]]
+binding = "SESSIONS"
+id = "a45656fd830b4668a05943bbb5afe793"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE"
+id = "4867abb2dd3a4282ae2749007b26089c"
+
+# D1 Database for logging
+[[env.staging.d1_databases]]
+binding = "LOGS_DB"
+database_name = "telegram-bot-logs-staging"
+database_id = "163e1614-01a5-46a9-b718-674fc8a34f85"
+
+# Environment identifier
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+# =============================================================================
+# Production Environment
+# =============================================================================
+
+[env.production]
+name = "help-with-job-search-telegram-bot"
+workers_dev = true
+
+# Custom domain for production (uncomment and configure)
+# route = "bot.yourdomain.com/*"
+
+# KV Namespaces for production
+# Run: wrangler kv:namespace create "SESSIONS" --env production
+[[env.production.kv_namespaces]]
+binding = "SESSIONS"
+id = "06ccf718d2f4494aad2398b23c644b11"
+
+[[env.production.kv_namespaces]]
+binding = "CACHE"
+id = "2e49f98ca4a94852b51c2f6528f8677f"
+
+# D1 Database for logging
+[[env.production.d1_databases]]
+binding = "LOGS_DB"
+database_name = "telegram-bot-logs-production"
+database_id = "50f03a22-7301-401f-bde5-2c34b07975bc"
+
+# Environment identifier
+[env.production.vars]
+ENVIRONMENT = "production"
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+
+# Secrets (set via wrangler secret put)
+# These are sensitive values that should not be in this file
+# 
+# IMPORTANT: Use different Telegram bot tokens for each environment!
+# Create separate bots with @BotFather for dev/staging/production
+#
+# Development environment secrets:
+# wrangler secret put TELEGRAM_BOT_TOKEN --env development
+# wrangler secret put OPENAI_API_KEY --env development
+# wrangler secret put WEBHOOK_SECRET --env development
+#
+# Staging environment secrets (use staging bot token):
+# wrangler secret put TELEGRAM_BOT_TOKEN --env staging
+# wrangler secret put OPENAI_API_KEY --env staging
+# wrangler secret put WEBHOOK_SECRET --env staging
+#
+# Production environment secrets (use production bot token):
+# wrangler secret put TELEGRAM_BOT_TOKEN --env production
+# wrangler secret put OPENAI_API_KEY --env production
+# wrangler secret put WEBHOOK_SECRET --env production
+
+# =============================================================================
+# Advanced Configuration
+# =============================================================================
+
+# Resource limits (requires paid plan)
+# [limits]
+# cpu_ms = 50000  # 50 seconds max CPU time
+
+# Cron triggers (for cleanup tasks) - uncomment when needed
+# [triggers]
+# crons = ["0 2 * * *"]  # Daily cleanup at 2 AM UTC
+
+# =============================================================================
+# Local Development Configuration
+# =============================================================================
+
+# Local development settings
+[dev]
+ip = "127.0.0.1"
+port = 8787
+local_protocol = "http"
+persist_to = ".wrangler/state"
+
+# =============================================================================
+# Module Configuration
+# =============================================================================
+
+# Rules for file uploads
+[[rules]]
+type = "ESModule"
+globs = ["**/*.js", "**/*.mjs"]
+
+# =============================================================================
+# Deployment Configuration
+# =============================================================================
+
+# Keep old versions for rollback
+keep_old_versions = 5
+
+# Deployment notifications (optional)
+# [notifications]
+# enabled = true
+# channels = ["#deployments"]
+
+# =============================================================================
+# Analytics and Monitoring
+# =============================================================================
+
+# Cloudflare Analytics
+analytics = true
+
+# Usage model (bundled vs unbound)
+usage_model = "bundled"
+
+# =============================================================================
+# Comments and Documentation
+# =============================================================================
+
+# This wrangler.toml file provides:
+# 1. Multi-environment configuration (dev, staging, prod)
+# 2. KV namespace bindings for session and cache storage
+# 3. Environment-specific variables and settings
+# 4. Security configuration guidance
+# 5. Resource limits and performance tuning
+# 6. Local development configuration
+#
+# Setup Instructions:
+# 1. Replace placeholder KV namespace IDs with your actual IDs
+# 2. Configure custom domains if needed
+# 3. Set secrets using wrangler secret put commands
+# 4. Adjust resource limits based on your needs
+# 5. Configure D1 database if using analytics
+#
+# To create KV namespaces:
+# wrangler kv:namespace create "SESSIONS" --env development
+# wrangler kv:namespace create "CACHE" --env development
+# wrangler kv:namespace create "SESSIONS" --env staging
+# wrangler kv:namespace create "CACHE" --env staging
+# wrangler kv:namespace create "SESSIONS" --env production
+# wrangler kv:namespace create "CACHE" --env production
+#
+# To create D1 database (optional):
+# wrangler d1 create resume-matcher-analytics
