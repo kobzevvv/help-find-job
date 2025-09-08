@@ -468,36 +468,57 @@ ${analysis.summary}
 
       if (!password) {
         const helpMessage = this.getAdminHelpMessage(`/get_last_${limit}_messages`);
-        await this.telegramService.sendMessage({
+        const sent = await this.telegramService.sendMessage({
           chat_id: chatId,
           text: helpMessage,
         });
+        if (sent) {
+          await this.loggingService.logBotResponse(userId, chatId, 'Admin help message');
+        } else {
+          await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send admin help message', new Error('sendMessage returned false'), userId, chatId);
+        }
         return;
       }
 
       if (!this.checkPassword(password)) {
-        await this.telegramService.sendMessage({
+        const sent = await this.telegramService.sendMessage({
           chat_id: chatId,
           text: '❌ Invalid password.',
         });
+        if (sent) {
+          await this.loggingService.logBotResponse(userId, chatId, '❌ Invalid password.');
+        } else {
+          await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send invalid password message', new Error('sendMessage returned false'), userId, chatId);
+        }
         await this.loggingService.log('WARN', 'LOG_ACCESS_DENIED', 'Invalid password for log access', { limit }, userId, chatId);
         return;
       }
 
       // Send "loading" message
-      await this.telegramService.sendMessage({
+      const loadingSent = await this.telegramService.sendMessage({
         chat_id: chatId,
         text: `📊 Fetching last ${limit} log messages...`,
       });
+      if (loadingSent) {
+        await this.loggingService.logBotResponse(userId, chatId, `📊 Fetching last ${limit} log messages...`);
+      } else {
+        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send loading message', new Error('sendMessage returned false'), userId, chatId);
+        return; // Don't continue if we can't send messages
+      }
 
       // Get formatted logs
       const formattedLogs = await this.loggingService.getFormattedRecentLogs(limit, this.environment);
 
       // Send logs
-      await this.telegramService.sendMessage({
+      const logsSent = await this.telegramService.sendMessage({
         chat_id: chatId,
         text: formattedLogs,
       });
+      if (logsSent) {
+        await this.loggingService.logBotResponse(userId, chatId, 'Log results sent');
+      } else {
+        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send log results', new Error('sendMessage returned false'), userId, chatId);
+      }
 
       // Log access
       await this.loggingService.log('INFO', 'LOG_ACCESS_SUCCESS', `Viewed last ${limit} messages`, { limit }, userId, chatId);
@@ -539,18 +560,29 @@ ${analysis.summary}
       }
 
       // Send "loading" message
-      await this.telegramService.sendMessage({
+      const loadingSent = await this.telegramService.sendMessage({
         chat_id: chatId,
         text: '📊 Generating log summary...',
       });
+      if (loadingSent) {
+        await this.loggingService.logBotResponse(userId, chatId, '📊 Generating log summary...');
+      } else {
+        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send loading message', new Error('sendMessage returned false'), userId, chatId);
+        return; // Don't continue if we can't send messages
+      }
 
       // Get log summary
       const summary = await this.loggingService.getAdminLogSummary(24);
 
-      await this.telegramService.sendMessage({
+      const summarySent = await this.telegramService.sendMessage({
         chat_id: chatId,
         text: summary,
       });
+      if (summarySent) {
+        await this.loggingService.logBotResponse(userId, chatId, 'Log summary sent');
+      } else {
+        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send log summary', new Error('sendMessage returned false'), userId, chatId);
+      }
 
       // Log access
       await this.loggingService.log('INFO', 'LOG_SUMMARY_SUCCESS', 'Viewed log summary', {}, userId, chatId);
