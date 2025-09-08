@@ -151,7 +151,6 @@ ENVIRONMENT = "production"
 ip = "127.0.0.1"
 port = 8787
 local_protocol = "http"
-persist_to = ".wrangler/state"
 
 # =============================================================================
 # Module Configuration
