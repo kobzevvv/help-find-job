@@ -184,7 +184,10 @@ export default {
           status: 'healthy', 
           timestamp: new Date().toISOString(),
           environment: env.ENVIRONMENT || 'unknown',
-          version: '1.0.0'
+          version: '1.0.0',
+          botTokenPresent: !!env.TELEGRAM_BOT_TOKEN,
+          botTokenLength: env.TELEGRAM_BOT_TOKEN?.length || 0,
+          webhookSecretPresent: !!env.WEBHOOK_SECRET
         }), {
           headers: { 'Content-Type': 'application/json' }
         });

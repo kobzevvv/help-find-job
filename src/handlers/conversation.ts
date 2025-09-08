@@ -408,20 +408,30 @@ ${analysis.summary}
    * Send welcome message
    */
   private async sendWelcomeMessage(chatId: number): Promise<void> {
-    await this.telegramService.sendMessage({
+    const sent = await this.telegramService.sendMessage({
       chat_id: chatId,
       text: '👋 Welcome to Resume Matcher Bot!\n\nI help you analyze how well your resume matches job descriptions using AI.\n\n🚀 To get started, send:\n/resume_and_job_post_match\n\n❓ Need help? Send /help',
     });
+    if (sent) {
+      await this.loggingService.logBotResponse(0, chatId, 'Welcome message sent');
+    } else {
+      await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send welcome message', new Error('sendMessage returned false'), 0, chatId);
+    }
   }
 
   /**
    * Send help message
    */
   private async sendHelpMessage(chatId: number): Promise<void> {
-    await this.telegramService.sendMessage({
+    const sent = await this.telegramService.sendMessage({
       chat_id: chatId,
       text: '🤖 Resume Matcher Bot Commands\n\n/resume_and_job_post_match - Start resume analysis\n/help - Show this help message\n/cancel - Cancel current process\n\nOr just type "help match resume" to get started!',
     });
+    if (sent) {
+      await this.loggingService.logBotResponse(0, chatId, 'Help message sent');
+    } else {
+      await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send help message', new Error('sendMessage returned false'), 0, chatId);
+    }
   }
 
   /**
