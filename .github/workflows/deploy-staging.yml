@@ -79,7 +79,7 @@ jobs:
         run: |
           curl -X POST "https://api.telegram.org/bot8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI/setWebhook" \
             -H "Content-Type: application/json" \
-            -d '{"url": "https://help-with-job-search-telegram-bot-staging.workers.dev/webhook"}'
+            -d '{"url": "https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/webhook"}'
 
       - name: Comment PR with staging bot info
         if: github.event_name == 'pull_request'
@@ -88,7 +88,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const botUsername = 'job_search_help_staging_bot';
-            const stagingUrl = 'https://help-with-job-search-telegram-bot-staging.workers.dev';
+            const stagingUrl = 'https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev';
             
             const comment = `## 🤖 Staging Deployment Ready!
             
@@ -120,4 +120,4 @@ jobs:
           script: |
             console.log('✅ Staging deployment completed successfully');
             console.log('🤖 Staging bot: @job_search_help_staging_bot');
-            console.log('🌐 Staging URL: https://help-with-job-search-telegram-bot-staging.workers.dev');
+            console.log('🌐 Staging URL: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev');
