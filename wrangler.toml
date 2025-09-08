@@ -11,6 +11,7 @@ name = "help-with-job-search-telegram-bot"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
+account_id = "c8f793821e2b05647f669d4f13b51f0e"
 
 # TypeScript support - wrangler will handle compilation automatically
 
