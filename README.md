@@ -108,12 +108,9 @@ The bot includes simple admin commands for debugging and monitoring:
 ### Usage
 ```bash
 # View recent logs (replace with actual password)
-/get_last_10_messages AdminPass2024_Secure_9X7mK2pL8qR3nF6j
-/get_last_100_messages AdminPass2024_Secure_9X7mK2pL8qR3nF6j
-
+/get_last_10_messages 12345678/get_last_100_messages 12345678
 # Get log summary  
-/log_summary AdminPass2024_Secure_9X7mK2pL8qR3nF6j
-```
+/log_summary 12345678```
 
 ### How It Works
 - 🔑 **One command authentication** - no login sessions
@@ -211,8 +208,7 @@ Bot:  🔄 Analyzing your resume against the job requirements...
 ### Admin Usage Example
 
 ```
-Developer: /get_last_10_messages AdminPass2024_Secure_9X7mK2pL8qR3nF6j
-Bot:       📊 Fetching last 10 log messages...
+Developer: /get_last_10_messages 12345678Bot:       📊 Fetching last 10 log messages...
 
            📊 Last 10 Log Messages
 
