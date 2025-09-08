@@ -7,15 +7,15 @@ export interface LogEntry {
   timestamp: string;
   level: 'INFO' | 'ERROR' | 'DEBUG' | 'WARN';
   event_type: string;
-  user_id?: number;
-  chat_id?: number;
+  user_id?: number | undefined;
+  chat_id?: number | undefined;
   message: string;
-  data?: string;
-  error_details?: string;
+  data?: string | undefined;
+  error_details?: string | undefined;
 }
 
 export class LoggingService {
-  private db?: D1Database;
+  private db: D1Database | undefined;
   private isInitialized = false;
 
   constructor(db?: D1Database) {
@@ -154,7 +154,7 @@ export class LoggingService {
         LIMIT ?
       `).bind(limit).all();
 
-      return result.results as LogEntry[];
+      return (result.results as unknown[]).map(row => row as LogEntry);
     } catch (error) {
       console.error('Failed to fetch recent logs:', error);
       return [];
@@ -175,7 +175,7 @@ export class LoggingService {
         LIMIT ?
       `).bind(userId, limit).all();
 
-      return result.results as LogEntry[];
+      return (result.results as unknown[]).map(row => row as LogEntry);
     } catch (error) {
       console.error('Failed to fetch user logs:', error);
       return [];
@@ -230,7 +230,7 @@ export class LoggingService {
       formattedMessage += `📝 ${log.message}\n`;
       
       if (log.error_details) {
-        const shortError = log.error_details.split('\n')[0].substring(0, 100);
+        const shortError = log.error_details.split('\n')[0]?.substring(0, 100) || '';
         formattedMessage += `❌ ${shortError}${log.error_details.length > 100 ? '...' : ''}\n`;
       }
       
@@ -305,8 +305,12 @@ export class LoggingService {
     if (logs.length === 0) return 'No entries';
     
     try {
-      const newest = new Date(logs[0].timestamp);
-      const oldest = new Date(logs[logs.length - 1].timestamp);
+      const newestLog = logs[0];
+      const oldestLog = logs[logs.length - 1];
+      if (!newestLog?.timestamp || !oldestLog?.timestamp) return 'Recent entries';
+      
+      const newest = new Date(newestLog.timestamp);
+      const oldest = new Date(oldestLog.timestamp);
       const diffMs = newest.getTime() - oldest.getTime();
       
       const diffMinutes = Math.floor(diffMs / (1000 * 60));

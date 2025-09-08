@@ -20,9 +20,9 @@ export interface LoginAttempt {
 }
 
 export class AdminAuthService {
-  private kv?: KVNamespace;
+  private kv: KVNamespace | undefined;
   private environment: string;
-  private adminPassword?: string;
+  private adminPassword: string | undefined;
   private authRequired: boolean;
   private maxLoginAttempts: number;
   private loginCooldownMinutes: number;
@@ -125,7 +125,7 @@ export class AdminAuthService {
       return { 
         success: false, 
         message: `Too many login attempts. Please wait ${cooldownResult.remainingMinutes} minutes.`,
-        cooldownMinutes: cooldownResult.remainingMinutes
+        cooldownMinutes: cooldownResult.remainingMinutes || this.loginCooldownMinutes
       };
     }
 

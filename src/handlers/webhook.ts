@@ -9,7 +9,7 @@ import { LoggingService } from '../services/logging';
 export class WebhookHandler {
   private conversationHandler: ConversationHandler;
   private webhookSecret: string | undefined;
-  private loggingService?: LoggingService;
+  private loggingService: LoggingService | undefined;
 
   constructor(conversationHandler: ConversationHandler, webhookSecret?: string, loggingService?: LoggingService) {
     this.conversationHandler = conversationHandler;
@@ -27,7 +27,7 @@ export class WebhookHandler {
       await this.loggingService?.log('DEBUG', 'WEBHOOK_REQUEST', 'Received webhook request', {
         method: request.method,
         url: request.url,
-        headers: Object.fromEntries(request.headers.entries())
+        headers: this.headersToObject(request.headers)
       });
 
       // Validate request method
@@ -172,6 +172,17 @@ export class WebhookHandler {
       console.error('Rate limiting error:', error);
       return true; // Allow on error
     }
+  }
+
+  /**
+   * Convert Headers to plain object
+   */
+  private headersToObject(headers: Headers): Record<string, string> {
+    const result: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
   }
 
   /**
