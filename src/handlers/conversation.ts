@@ -443,10 +443,8 @@ ${analysis.summary}
     
     if (this.environment === 'staging') {
       environmentInfo = `\n\n🔧 **Staging Environment**\nPassword: \`${this.adminPassword}\``;
-    } else if (this.environment === 'production') {
-      environmentInfo = '\n\n🔒 **Production Environment**\nAsk the developer for the password.';
     } else {
-      environmentInfo = '\n\n🛠️ **Development Environment**\nAsk the developer for the password.';
+      environmentInfo = '\n\n🔒 **Secure Environment**\nAsk the developer for the password.';
     }
 
     return `🔑 **Admin Command Help**\n\nUsage: \`${command} <password>\`${environmentInfo}\n\n📋 **Available Commands:**\n• \`/get_last_10_messages <password>\`\n• \`/get_last_100_messages <password>\`\n• \`/log_summary <password>\``;

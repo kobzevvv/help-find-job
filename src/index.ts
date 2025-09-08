@@ -122,7 +122,7 @@ async function initializeServices(env: Env) {
 
   // Initialize admin auth service
   const adminPassword = environment === 'staging' 
-    ? (env.ADMIN_PASSWORD_STAGING || '12345678')
+    ? (env.ADMIN_PASSWORD_STAGING || '12354678')
     : env.ADMIN_PASSWORD;
     
   const adminAuthService = new AdminAuthService(
