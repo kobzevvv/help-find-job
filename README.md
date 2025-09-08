@@ -107,10 +107,20 @@ The bot includes simple admin commands for debugging and monitoring:
 
 ### Usage
 ```bash
-# View recent logs (replace with actual password)
-/get_last_10_messages 12345678/get_last_100_messages 12345678
-# Get log summary  
-/log_summary 12345678```
+# Staging Environment (public password for testing)
+/get_last_10_messages 12354678
+/get_last_100_messages 12354678
+/log_summary 12354678
+
+# Production Environment (secure password - contact developer)
+/get_last_10_messages <secure_password>
+/get_last_100_messages <secure_password>
+/log_summary <secure_password>
+```
+
+### Current Passwords:
+- **🎯 Staging**: `12354678` (public for all developers)
+- **🏭 Production**: Secure password (contact maintainer)
 
 ### How It Works
 - 🔑 **One command authentication** - no login sessions

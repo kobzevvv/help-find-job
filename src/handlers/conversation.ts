@@ -468,6 +468,19 @@ ${analysis.summary}
   }
 
   /**
+   * Get environment-specific invalid password message
+   */
+  private getInvalidPasswordMessage(): string {
+    if (this.environment === 'staging') {
+      return `❌ Invalid password for staging environment.\n\n🔑 **Staging Password**: \`${this.adminPassword}\`\n\n💡 For staging, use: \`/get_last_10_messages ${this.adminPassword}\``;
+    } else if (this.environment === 'production') {
+      return `❌ Invalid password for production environment.\n\n🔒 **Production Access**: Contact the developer for the secure password.`;
+    } else {
+      return `❌ Invalid password for development environment.\n\n🛠️ **Development Password**: \`${this.adminPassword}\``;
+    }
+  }
+
+  /**
    * Handle simplified log command with inline password
    */
   private async handleSimpleLogCommand(fullText: string, chatId: number, userId: number, limit: number): Promise<void> {
@@ -491,12 +504,13 @@ ${analysis.summary}
       }
 
       if (!this.checkPassword(password)) {
+        const errorMessage = this.getInvalidPasswordMessage();
         const sent = await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '❌ Invalid password.',
+          text: errorMessage,
         });
         if (sent) {
-          await this.loggingService.logBotResponse(userId, chatId, '❌ Invalid password.');
+          await this.loggingService.logBotResponse(userId, chatId, errorMessage);
         } else {
           await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send invalid password message', new Error('sendMessage returned false'), userId, chatId);
         }
@@ -561,9 +575,10 @@ ${analysis.summary}
       }
 
       if (!this.checkPassword(password)) {
+        const errorMessage = this.getInvalidPasswordMessage();
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '❌ Invalid password.',
+          text: errorMessage,
         });
         await this.loggingService.log('WARN', 'LOG_SUMMARY_ACCESS_DENIED', 'Invalid password for log summary access', {}, userId, chatId);
         return;
