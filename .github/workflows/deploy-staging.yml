@@ -73,6 +73,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING }}
           WEBHOOK_SECRET: "3c8a4efeb4b36eed52758eb194300a89d3074567299b3a826ea0922100a16752"
+          # Set staging admin password explicitly
+          ADMIN_PASSWORD_STAGING: "12354678"
 
       - name: Set staging webhook
         if: success()
