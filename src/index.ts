@@ -59,7 +59,7 @@ export interface Env {
 /**
  * Load application configuration
  */
-async function loadConfig(environment: string): Promise<any> {
+async function loadConfig(_environment: string): Promise<any> {
   try {
     // Import config.json - in a real scenario, you might fetch this from KV or use it directly
     const config = {
@@ -401,7 +401,7 @@ async function handleTestBot(request: Request, env: Env): Promise<Response> {
         update_id: 99999,
         message: {
           message_id: 99999,
-          from: { id: testUserId, first_name: 'Test' },
+          from: { id: testUserId, first_name: 'Test', is_bot: false },
           chat: { id: testUserId, type: 'private' as const },
           date: Math.floor(Date.now() / 1000),
           text: testMessage

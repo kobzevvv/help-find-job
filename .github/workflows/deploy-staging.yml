@@ -6,6 +6,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
@@ -30,6 +35,33 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Check deployment prerequisites  
+        run: |
+          echo "🔍 Checking deployment prerequisites..."
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "❌ CLOUDFLARE_API_TOKEN secret is not set"
+            echo "📋 Please set this secret in GitHub repository settings"
+            echo "🔗 Guide: https://github.com/${{ github.repository }}/blob/main/.github/SECRETS_SETUP.md"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set"
+          fi
+          
+          if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "❌ CLOUDFLARE_ACCOUNT_ID secret is not set"
+            echo "📋 Please set this secret in GitHub repository settings"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set"
+          fi
+          
+          if [ -z "${{ secrets.OPENAI_API_KEY_STAGING }}" ]; then
+            echo "⚠️ OPENAI_API_KEY_STAGING secret is not set"
+            echo "📋 AI features will not work in staging"
+          else
+            echo "✅ OPENAI_API_KEY_STAGING is set"
+          fi
+
       - name: Deploy to Cloudflare Workers (Staging)
         uses: cloudflare/wrangler-action@v3
         with:
@@ -40,7 +72,7 @@ jobs:
           # Public staging bot token - safe to expose for testing
           TELEGRAM_BOT_TOKEN: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING }}
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET_STAGING }}
+          WEBHOOK_SECRET: "3c8a4efeb4b36eed52758eb194300a89d3074567299b3a826ea0922100a16752"
 
       - name: Set staging webhook
         if: success()
@@ -53,6 +85,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const botUsername = 'job_search_help_staging_bot';
             const stagingUrl = 'https://help-with-job-search-telegram-bot-staging.workers.dev';

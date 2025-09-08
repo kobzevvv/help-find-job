@@ -213,7 +213,8 @@ export class ConversationHandler {
    * Handle bot commands
    */
   private async handleCommand(fullText: string, chatId: number, userId: number): Promise<void> {
-    const command = fullText.trim().split(/\s+/)[0].toLowerCase();
+    const parts = fullText.trim().split(/\s+/);
+    const command = parts.length > 0 && parts[0] ? parts[0].toLowerCase() : '';
     switch (command) {
       case '/start':
         await this.sendWelcomeMessage(chatId);
