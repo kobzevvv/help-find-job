@@ -145,7 +145,8 @@ async function initializeServices(env: Env) {
     documentService,
     aiService,
     loggingService,
-    env.ENVIRONMENT || 'development'
+    env.ENVIRONMENT || 'development',
+    adminPassword || 'defaultpassword'
   );
 
   // Initialize webhook handler with rate limiting

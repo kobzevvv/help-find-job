@@ -16,6 +16,7 @@ export class ConversationHandler {
   private aiService: AIService;
   private loggingService: LoggingService;
   private environment: string;
+  private adminPassword: string;
 
   constructor(
     sessionService: SessionService,
@@ -23,7 +24,8 @@ export class ConversationHandler {
     documentService: DocumentService,
     aiService: AIService,
     loggingService: LoggingService,
-    environment: string = 'development'
+    environment: string = 'development',
+    adminPassword: string = 'defaultpassword'
   ) {
     this.sessionService = sessionService;
     this.telegramService = telegramService;
@@ -31,6 +33,7 @@ export class ConversationHandler {
     this.aiService = aiService;
     this.loggingService = loggingService;
     this.environment = environment;
+    this.adminPassword = adminPassword;
   }
 
   /**
@@ -433,12 +436,27 @@ ${analysis.summary}
   }
 
   /**
+   * Get environment-specific admin help message
+   */
+  private getAdminHelpMessage(command: string): string {
+    let environmentInfo = '';
+    
+    if (this.environment === 'staging') {
+      environmentInfo = `\n\n🔧 **Staging Environment**\nPassword: \`${this.adminPassword}\``;
+    } else if (this.environment === 'production') {
+      environmentInfo = '\n\n🔒 **Production Environment**\nAsk the developer for the password.';
+    } else {
+      environmentInfo = '\n\n🛠️ **Development Environment**\nAsk the developer for the password.';
+    }
+
+    return `🔑 **Admin Command Help**\n\nUsage: \`${command} <password>\`${environmentInfo}\n\n📋 **Available Commands:**\n• \`/get_last_10_messages <password>\`\n• \`/get_last_100_messages <password>\`\n• \`/log_summary <password>\``;
+  }
+
+  /**
    * Simple password check for admin commands
    */
   private checkPassword(password: string): boolean {
-    // Use the same password that was configured before
-    const adminPassword = 'AdminPass2024_Secure_9X7mK2pL8qR3nF6j';
-    return password === adminPassword;
+    return password === this.adminPassword;
   }
 
   /**
@@ -451,9 +469,10 @@ ${analysis.summary}
       const password = parts[1];
 
       if (!password) {
+        const helpMessage = this.getAdminHelpMessage(`/get_last_${limit}_messages`);
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: `🔑 Please provide password:\n\n\`/get_last_${limit}_messages <password>\`\n\n💡 Ask the developer for the password.`,
+          text: helpMessage,
         });
         return;
       }
@@ -504,9 +523,10 @@ ${analysis.summary}
       const password = parts[1];
 
       if (!password) {
+        const helpMessage = this.getAdminHelpMessage('/log_summary');
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '🔑 Please provide password:\n\n\`/log_summary <password>\`\n\n💡 Ask the developer for the password.',
+          text: helpMessage,
         });
         return;
       }
