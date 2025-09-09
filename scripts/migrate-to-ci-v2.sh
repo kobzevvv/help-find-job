@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 CI/CD Architecture v2 Migration Script
-# This script safely migrates from legacy CI/CD to the new architecture
+# CI/CD Architecture Migration Script
+# Migrates from legacy CI/CD to refactored architecture
 
 set -e  # Exit on any error
 
@@ -9,8 +9,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKFLOWS_DIR="$PROJECT_ROOT/.github/workflows"
 
-echo "🏗️ CI/CD Architecture v2 Migration Script"
-echo "=========================================="
+echo "CI/CD Migration Script"
+echo "======================"
 echo ""
 
 # Check if we're in the right directory
@@ -194,27 +194,24 @@ if [ -f "$WORKFLOWS_DIR/deploy-production-v2.yml" ]; then
 fi
 
 echo ""
-echo "🎉 CI/CD Architecture v2 Migration Completed Successfully!"
+echo "Migration Completed"
 echo ""
-echo "📊 Migration Summary:"
-echo "===================="
+echo "Summary:"
+echo "========"
 echo "✅ Quality Gates workflow: Active"
-echo "✅ Advanced Staging deployment: Active"
-echo "✅ Advanced Production deployment: Active"
-echo "✅ Enhanced test system: Configured"
+echo "✅ Staging deployment v2: Active"  
+echo "✅ Production deployment v2: Active"
+echo "✅ Test system: Configured"
 echo "✅ Build artifact caching: Enabled"
 echo "✅ Legacy workflows: Backed up"
 echo ""
-echo "📝 Next Steps:"
-echo "============="
-echo "1. 🔄 Commit and push these changes to trigger the new workflows"
-echo "2. 📊 Monitor the first deployment to ensure everything works"
-echo "3. 📚 Review the documentation: docs/CI_CD_ARCHITECTURE_V2.md"
-echo "4. 🧹 Clean up legacy workflows after successful validation"
+echo "Next Steps:"
+echo "==========="
+echo "1. Commit and push changes to trigger new workflows"
+echo "2. Monitor first deployment"
+echo "3. Review documentation: docs/CI_CD_ARCHITECTURE_V2.md"
+echo "4. Clean up legacy workflows after validation"
 echo ""
-echo "🚀 Your CI/CD system is now enterprise-ready!"
-echo ""
-echo "💡 Need help? Check the documentation or rollback using:"
-echo "   git checkout -- .github/workflows/"
-echo "   # Then restore from backup: $BACKUP_DIR"
+echo "Rollback: git checkout -- .github/workflows/"
+echo "Backup location: $BACKUP_DIR"
 echo ""
