@@ -3,8 +3,6 @@ name: Deploy to Staging
 on:
   push:
     branches: [main]
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -15,6 +13,8 @@ jobs:
   deploy-staging:
     runs-on: ubuntu-latest
     name: Deploy to Staging Environment
+    # Only deploy on direct pushes to main, never on PRs
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
       - name: Checkout code
@@ -96,37 +96,6 @@ jobs:
           echo "🔍 Validating deployment configuration and migration safety..."
           npm run validate:migration
 
-      - name: Comment PR with staging bot info
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const botUsername = 'job_search_help_staging_bot';
-            const stagingUrl = 'https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev';
-            
-            const comment = `## 🤖 Staging Deployment Ready!
-            
-            Your changes have been deployed to the staging environment:
-            
-            **🔗 Test the bot**: [@${botUsername}](https://t.me/${botUsername})
-            **🌐 Worker URL**: ${stagingUrl}
-            **📊 Health check**: ${stagingUrl}/health
-            
-            ### Testing Instructions:
-            1. Open [@${botUsername}](https://t.me/${botUsername}) in Telegram
-            2. Send \`/start\` or \`/resume_and_job_post_match\` 
-            3. Test your changes with sample resume and job posting
-            4. Report any issues in this PR
-            
-            > 💡 **Note**: This is a shared staging environment for all developers to test features safely.`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
 
       - name: Update README with deployment status
         if: github.ref == 'refs/heads/main'
