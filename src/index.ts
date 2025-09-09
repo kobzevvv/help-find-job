@@ -13,9 +13,11 @@ import { DocumentService } from './services/document';
 import { AIService } from './services/ai';
 import { EnhancedAIService } from './services/enhanced-ai';
 import { LoggingService } from './services/logging';
+import { CloudflareAIService } from './types/ai';
 import { AdminAuthService } from './services/admin-auth';
 import { EnvironmentConfigurationService } from './config/environment';
 import { createServiceContainer } from './container/service-container';
+import { DocumentProcessingPipeline } from './services/document-pipeline';
 
 export interface Env {
   // 🔄 EXISTING Telegram Configuration (for migration compatibility)
@@ -48,9 +50,7 @@ export interface Env {
   OPENAI_ORG_ID?: string;
 
   // 🆕 NEW Cloudflare Workers AI Configuration
-  AI?: {
-    run: (model: string, options: unknown) => Promise<unknown>;
-  };
+  AI?: CloudflareAIService;
 
   // 🔄 EXISTING + NEW Admin Configuration
   ADMIN_PASSWORD?: string;
@@ -195,7 +195,7 @@ export default {
           console.log('🧪 Testing document processing pipeline...');
 
           const services = await initializeServices(env);
-          const pipeline = await services.container.get('documentPipeline');
+          const pipeline = await services.container.get('documentPipeline') as DocumentProcessingPipeline;
 
           if (!pipeline) {
             return new Response(

@@ -7,6 +7,7 @@
 
 import { UserRequest, DocumentReference } from '../types/session';
 import { DocumentStorage } from './document-pipeline';
+import { ServiceHealth } from '../types/service';
 
 export interface RequestStorage {
   storeRequest(request: UserRequest): Promise<void>;
@@ -29,11 +30,7 @@ export interface RequestStorage {
     activeRequests: number;
     completedRequests: number;
   }>;
-  healthCheck?(): Promise<{
-    status: 'healthy' | 'unhealthy';
-    message: string;
-    details?: Record<string, unknown>;
-  }>;
+  healthCheck?(): Promise<ServiceHealth>;
 }
 
 /**
@@ -299,11 +296,7 @@ export class CloudflareRequestStorage
   /**
    * Health check
    */
-  async healthCheck(): Promise<{
-    status: 'healthy' | 'unhealthy';
-    message: string;
-    details?: Record<string, unknown>;
-  }> {
+  async healthCheck(): Promise<ServiceHealth> {
     try {
       // Test basic KV operations
       const testKey = `health-check-${Date.now()}`;
@@ -322,12 +315,14 @@ export class CloudflareRequestStorage
       await this.requestsKV.delete(testKey);
 
       return {
+        name: 'request-storage',
         status: 'healthy',
         message: 'Request storage operational',
         details: { kvOperationsTest: 'passed' },
       };
     } catch (error) {
       return {
+        name: 'request-storage',
         status: 'unhealthy',
         message: `Storage health check failed: ${error instanceof Error ? error.message : String(error)}`,
       };

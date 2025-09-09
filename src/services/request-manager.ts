@@ -14,6 +14,7 @@ import { DocumentProcessingPipeline } from './document-pipeline';
 import { RequestStorage } from './request-storage';
 import { EnhancedAIService } from './enhanced-ai';
 import { LoggingService } from './logging';
+import { ServiceHealth } from '../types/service';
 
 export interface RequestAnalysisResult {
   request: UserRequest;
@@ -402,16 +403,13 @@ export class UserRequestManager {
   /**
    * Health check
    */
-  async healthCheck(): Promise<{
-    status: 'healthy' | 'unhealthy';
-    message: string;
-    details?: Record<string, unknown>;
-  }> {
+  async healthCheck(): Promise<ServiceHealth> {
     try {
       // Check pipeline health
       const pipelineHealth = await this.pipeline.healthCheck();
       if (pipelineHealth.status !== 'healthy') {
         return {
+          name: 'request-manager',
           status: 'unhealthy',
           message: `Pipeline unhealthy: ${pipelineHealth.message}`,
           details: { pipeline: pipelineHealth },
@@ -419,14 +417,16 @@ export class UserRequestManager {
       }
 
       // Check storage health if method exists
-      let storageHealth = {
-        status: 'healthy' as const,
+      let storageHealth: ServiceHealth = {
+        name: 'storage',
+        status: 'healthy',
         message: 'Storage check skipped',
       };
       if ('healthCheck' in this.storage && this.storage.healthCheck) {
         storageHealth = await this.storage.healthCheck();
         if (storageHealth.status !== 'healthy') {
           return {
+            name: 'request-manager',
             status: 'unhealthy',
             message: `Storage unhealthy: ${storageHealth.message}`,
             details: { storage: storageHealth },
@@ -435,6 +435,7 @@ export class UserRequestManager {
       }
 
       return {
+        name: 'request-manager',
         status: 'healthy',
         message: 'Request manager operational',
         details: {
@@ -444,6 +445,7 @@ export class UserRequestManager {
       };
     } catch (error) {
       return {
+        name: 'request-manager',
         status: 'unhealthy',
         message: `Request manager health check failed: ${error instanceof Error ? error.message : String(error)}`,
       };

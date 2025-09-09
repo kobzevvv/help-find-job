@@ -6,6 +6,7 @@
  */
 
 import { DocumentReference } from '../types/session';
+import { CloudflareAIService } from '../types/ai';
 
 export interface DocumentStorage {
   storeDocument(document: DocumentReference): Promise<void>;
@@ -18,15 +19,11 @@ export interface DocumentStorage {
  * Pipeline for processing documents and creating structured references
  */
 export class DocumentProcessingPipeline {
-  private ai: {
-    run: (model: string, options: unknown) => Promise<unknown>;
-  };
+  private ai: CloudflareAIService;
   private storage: DocumentStorage;
 
   constructor(
-    ai: {
-      run: (model: string, options: unknown) => Promise<unknown>;
-    },
+    ai: CloudflareAIService,
     storage: DocumentStorage
   ) {
     this.ai = ai;

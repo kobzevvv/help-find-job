@@ -19,18 +19,13 @@ import { CloudflareRequestStorage } from '../services/request-storage';
 import { UserRequestManager } from '../services/request-manager';
 import { ConversationHandler } from '../handlers/conversation';
 import { WebhookHandler } from '../handlers/webhook';
+import { ServiceHealth, ServiceLifecycle } from '../types/service';
 
 export interface ServiceFactory<T> {
   create(container: ServiceContainer): Promise<T>;
   dependencies: string[];
 }
 
-export interface ServiceHealth {
-  name: string;
-  status: 'healthy' | 'unhealthy' | 'unknown';
-  message: string;
-  details?: Record<string, unknown>;
-}
 
 export interface AppConfig {
   admin: {
@@ -190,8 +185,8 @@ export class ServiceContainer {
         let health: ServiceHealth;
 
         // Check if service has a health check method
-        if (service && typeof service.healthCheck === 'function') {
-          health = await service.healthCheck();
+        if (service && typeof service === 'object' && service !== null && 'healthCheck' in service && typeof (service as ServiceLifecycle).healthCheck === 'function') {
+          health = await (service as ServiceLifecycle).healthCheck!();
         } else {
           // Default health check - just check if service is initialized
           health = {
@@ -228,8 +223,8 @@ export class ServiceContainer {
 
       try {
         // Check if service has a shutdown method
-        if (service && typeof service.shutdown === 'function') {
-          await service.shutdown();
+        if (service && typeof service === 'object' && service !== null && 'shutdown' in service && typeof (service as ServiceLifecycle).shutdown === 'function') {
+          await (service as ServiceLifecycle).shutdown!();
           console.log(`✅ Service shutdown: ${serviceName}`);
         }
       } catch (error) {
@@ -361,6 +356,9 @@ export async function createServiceContainer(
     async create(container) {
       const storage =
         await container.get<CloudflareRequestStorage>('requestStorage');
+      if (!env.AI) {
+        throw new Error('Cloudflare AI service is not available in environment');
+      }
       return new DocumentProcessingPipeline(env.AI, storage);
     },
   });

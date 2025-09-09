@@ -3,23 +3,22 @@
  */
 
 import { ProcessedDocument } from '../types/session';
+import { CloudflareAIService } from '../types/ai';
 
 // Note: PDF parsing fallback will be implemented when a Cloudflare Workers-compatible library is available
 
 export class DocumentService {
   private maxFileSizeMB: number;
-  private ai?: {
-    run: (model: string, options: unknown) => Promise<unknown>;
-  };
+  private ai?: CloudflareAIService;
 
   constructor(
     maxFileSizeMB: number = 10,
-    ai?: {
-      run: (model: string, options: unknown) => Promise<unknown>;
-    }
+    ai?: CloudflareAIService
   ) {
     this.maxFileSizeMB = maxFileSizeMB;
-    this.ai = ai;
+    if (ai !== undefined) {
+      this.ai = ai;
+    }
   }
 
   /**
