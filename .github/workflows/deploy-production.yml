@@ -28,6 +28,8 @@ permissions:
   contents: read
   issues: write
   deployments: write
+  pull-requests: write  # Required by quality-gates workflow
+  checks: write         # Required by quality-gates workflow
 
 jobs:
   pre-deployment-validation:
