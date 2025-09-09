@@ -104,6 +104,15 @@ tests/setup/
 - Pushes to main/develop/feature branches
 - Called by other workflows
 
+**⚠️ Permission Requirements:**
+Any workflow calling `quality-gates.yml` must include these permissions:
+```yaml
+permissions:
+  contents: read
+  pull-requests: write  # Required for PR comments
+  checks: write         # Required for check status updates
+```
+
 **Process:**
 1. Code Quality Checks (type checking, linting, format validation, security audit)
 2. Build & Test Pipeline (generate cache key, build if needed, run tests, cache artifacts)
