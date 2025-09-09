@@ -1,0 +1,187 @@
+name: Quality Gates
+
+# Comprehensive quality checks that run on all code changes
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop, 'feature/**', 'hotfix/**']
+  workflow_call:
+    outputs:
+      build-cache-key:
+        description: "Cache key for build artifacts"
+        value: ${{ jobs.build-and-test.outputs.cache-key }}
+      build-success:
+        description: "Whether build was successful"
+        value: ${{ jobs.build-and-test.outputs.success }}
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  quality-checks:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check
+        run: npm run type-check
+      
+      - name: Lint check
+        run: npm run lint
+      
+      - name: Format check
+        run: npm run format:check
+      
+      - name: Security audit
+        run: npm audit --audit-level moderate
+        continue-on-error: true
+
+  build-and-test:
+    name: Build & Test Pipeline
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    outputs:
+      cache-key: ${{ steps.cache-build.outputs.cache-primary-key }}
+      success: ${{ steps.build-status.outputs.success }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate build cache key
+        id: build-cache-key
+        run: |
+          # Create composite hash from source files and dependencies
+          SOURCE_HASH=$(find src -type f -name "*.ts" -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
+          DEPS_HASH=${{ hashFiles('**/package-lock.json', 'tsconfig.json') }}
+          CACHE_KEY="build-${{ runner.os }}-${SOURCE_HASH}-${DEPS_HASH}"
+          echo "cache-key=$CACHE_KEY" >> $GITHUB_OUTPUT
+          echo "source-hash=$SOURCE_HASH" >> $GITHUB_OUTPUT
+      
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        id: cache-build
+        with:
+          path: |
+            dist/
+            coverage/
+          key: ${{ steps.build-cache-key.outputs.cache-key }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ steps.build-cache-key.outputs.source-hash }}-
+            build-${{ runner.os }}-
+      
+      - name: Build application
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: npm run build:ci
+      
+      - name: Unit tests
+        run: npm run test:unit
+      
+      - name: Integration tests
+        run: npm run test:integration
+      
+      - name: E2E tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING || '' }}
+        run: npm run test:e2e
+      
+      - name: Generate test coverage
+        if: github.event_name == 'pull_request'
+        run: npm run test:coverage
+      
+      - name: Upload coverage reports
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 7
+      
+      - name: Upload build artifacts
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-${{ steps.build-cache-key.outputs.source-hash }}
+          path: |
+            dist/
+            package.json
+            package-lock.json
+            wrangler.toml
+          retention-days: 7
+      
+      - name: Set build status
+        id: build-status
+        run: echo "success=true" >> $GITHUB_OUTPUT
+
+  deployment-readiness:
+    name: Deployment Readiness Check
+    runs-on: ubuntu-latest
+    needs: [quality-checks, build-and-test]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate deployment configuration
+        run: |
+          echo "🔍 Validating deployment readiness..."
+          
+          # Check for required files
+          if [ ! -f "wrangler.toml" ]; then
+            echo "❌ wrangler.toml not found"
+            exit 1
+          fi
+          
+          if [ ! -f "package.json" ]; then
+            echo "❌ package.json not found"
+            exit 1
+          fi
+          
+          echo "✅ Deployment configuration valid"
+      
+      - name: Deployment readiness summary
+        run: |
+          echo "📊 Deployment Readiness Summary"
+          echo "================================"
+          echo "✅ Code quality checks passed"
+          echo "✅ All tests passed"
+          echo "✅ Build artifacts generated"
+          echo "✅ Configuration validated"
+          echo ""
+          echo "🚀 Ready for deployment to staging/production"
