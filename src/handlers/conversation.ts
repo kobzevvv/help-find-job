@@ -346,11 +346,11 @@ export class ConversationHandler {
         await this.sessionService.addResume(userId, mergedResume);
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '🧩 Added more resume content. When finished, confirm below:',
+          text: '🧩 Добавлено дополнительное содержимое резюме. Когда закончите, подтвердите ниже:',
           reply_markup: {
             inline_keyboard: [[
-              { text: '✅ Done with resume', callback_data: 'resume_done' },
-              { text: '❌ Cancel', callback_data: 'cancel' }
+              { text: '✅ Готово с резюме', callback_data: 'resume_done' },
+              { text: '❌ Отмена', callback_data: 'cancel' }
             ]]
           }
         });
@@ -360,11 +360,11 @@ export class ConversationHandler {
       await this.sessionService.addResume(userId, processedDocument);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '✅ Resume received. You can send more resume parts if needed. When finished, confirm below:',
+        text: '✅ Резюме получено. Вы можете отправить дополнительные части при необходимости. Когда закончите, подтвердите ниже:',
         reply_markup: {
           inline_keyboard: [[
-            { text: '✅ Done with resume', callback_data: 'resume_done' },
-            { text: '❌ Cancel', callback_data: 'cancel' }
+            { text: '✅ Готово с резюме', callback_data: 'resume_done' },
+            { text: '❌ Отмена', callback_data: 'cancel' }
           ]]
         }
       });
@@ -373,7 +373,7 @@ export class ConversationHandler {
       console.error('Error processing resume text:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Sorry, I couldn\'t process that text. Please try again.',
+        text: '❌ Не получилось обработать текст. Пожалуйста, попробуйте ещё раз.',
       });
     }
   }
@@ -425,10 +425,10 @@ export class ConversationHandler {
 
       if (!session?.resume || !session?.jobPost) {
         // If still missing, guide the user and return without failing the whole flow
-        const missing = !session?.resume ? 'resume' : 'job post';
+        const missing = !session?.resume ? 'резюме' : 'текст вакансии';
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: `❌ Missing ${missing} data. Please send your ${missing} to start the analysis.`,
+          text: `❌ Не хватает данных: ${missing}. Пожалуйста, отправьте ${missing}, чтобы начать анализ.`,
         });
         // Put the session back into the appropriate waiting state
         await this.sessionService.updateState(userId, !session?.resume ? 'waiting_resume' : 'waiting_job_post');
@@ -438,7 +438,7 @@ export class ConversationHandler {
       // Announce analysis only after we've confirmed both documents are present
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '🔄 Performing comprehensive resume analysis...\n\nThis will analyze:\n• Headlines & Job Titles\n• Skills Match\n• Experience Alignment\n• Job Conditions\n\nThis may take 60-90 seconds.',
+        text: '🔄 Выполняю комплексный анализ резюме...\n\nБудет проанализировано:\n• Заголовки и должности\n• Совпадение навыков\n• Соответствие опыта\n• Условия работы\n\nЭто может занять 60–90 секунд.',
       });
 
       console.log('Starting enhanced analysis for user:', userId);
@@ -455,7 +455,7 @@ export class ConversationHandler {
       console.error('Error during enhanced analysis:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Sorry, the analysis failed. Please try again later.\n\nError details: ' + (error as Error).message,
+        text: '❌ Анализ не удался. Пожалуйста, попробуйте позже.\n\nДетали ошибки: ' + (error as Error).message,
       });
       await this.sessionService.completeSession(userId);
     }
