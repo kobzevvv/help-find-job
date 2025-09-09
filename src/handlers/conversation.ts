@@ -10,7 +10,7 @@ import { AIService } from '../services/ai';
 import { EnhancedAIService } from '../services/enhanced-ai';
 import { LoggingService } from '../services/logging';
 import { EnhancedAnalysis } from '../types/session';
-import { getStrings, formatTemplate } from '../i18n';
+import { getStrings } from '../i18n';
 
 export class ConversationHandler {
   private sessionService: SessionService;
