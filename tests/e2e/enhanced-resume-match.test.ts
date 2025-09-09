@@ -3,6 +3,15 @@
  * 
  * This test file validates the comprehensive resume analysis system
  * using real test data to ensure all functionality works correctly.
+ * 
+ * ⚠️  MANUAL TESTING ONLY - NOT RUN IN CI/CD
+ * 
+ * These tests make real OpenAI API calls and are expensive/slow.
+ * Run manually when testing AI integration changes:
+ * 
+ *   OPENAI_API_KEY=your_key npm run test:e2e
+ * 
+ * Integration tests provide sufficient automated coverage for CI/CD.
  */
 
 import { EnhancedAIService } from '../../src/services/enhanced-ai';

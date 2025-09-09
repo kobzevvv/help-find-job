@@ -115,10 +115,9 @@ jobs:
       - name: Integration tests
         run: npm run test:integration
       
-      - name: E2E tests
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING || '' }}
-        run: npm run test:e2e
+      # E2E tests disabled in CI - run manually when needed with: npm run test:e2e
+      # These tests require OpenAI API keys and are expensive/slow for CI/CD
+      # Integration tests provide sufficient coverage for automated validation
       
       - name: Generate test coverage
         if: github.event_name == 'pull_request'
