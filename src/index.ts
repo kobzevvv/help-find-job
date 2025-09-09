@@ -47,6 +47,9 @@ export interface Env {
   OPENAI_MODEL?: string;
   OPENAI_ORG_ID?: string;
 
+  // 🆕 NEW Cloudflare Workers AI Configuration
+  AI?: any;
+
   // 🔄 EXISTING + NEW Admin Configuration
   ADMIN_PASSWORD?: string;
   ADMIN_PASSWORD_STAGING?: string;

@@ -287,7 +287,7 @@ export async function createServiceContainer(
       const config =
         await container.get<EnvironmentConfigurationService>('config');
       const appConfig = config.getApplicationConfig();
-      return new DocumentService(appConfig.maxFileSizeMB);
+      return new DocumentService(appConfig.maxFileSizeMB, env.AI);
     },
   });
 

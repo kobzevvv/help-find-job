@@ -6,9 +6,11 @@ import { ProcessedDocument } from '../types/session';
 
 export class DocumentService {
   private maxFileSizeMB: number;
+  private ai: any;
 
-  constructor(maxFileSizeMB: number = 10) {
+  constructor(maxFileSizeMB: number = 10, ai?: any) {
     this.maxFileSizeMB = maxFileSizeMB;
+    this.ai = ai;
   }
 
   /**
@@ -82,27 +84,59 @@ export class DocumentService {
   }
 
   /**
-   * Extract text from PDF (basic implementation)
-   * Note: This is a placeholder - in production, you'd use a proper PDF parser
+   * Extract text from PDF using Cloudflare Workers AI
    */
-  private async extractTextFromPDF(_content: ArrayBuffer): Promise<string> {
-    // For now, return a message asking user to copy-paste text
-    // In production, you'd integrate with a PDF parsing library
-    throw new Error(
-      'Обработка PDF пока не реализована. Пожалуйста, скопируйте и вставьте текст.'
-    );
+  private async extractTextFromPDF(content: ArrayBuffer): Promise<string> {
+    if (!this.ai) {
+      throw new Error('AI сервис недоступен для обработки PDF');
+    }
+
+    try {
+      const blob = new Blob([content], { type: 'application/pdf' });
+      
+      const results = await this.ai.toMarkdown([{
+        name: 'document.pdf',
+        blob
+      }]);
+
+      if (results && results[0] && results[0].markdown) {
+        return this.markdownToText(results[0].markdown);
+      } else {
+        throw new Error('Не удалось извлечь текст из PDF');
+      }
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      throw new Error('Ошибка при обработке PDF файла');
+    }
   }
 
   /**
-   * Extract text from DOCX (basic implementation)
-   * Note: This is a placeholder - in production, you'd use a proper DOCX parser
+   * Extract text from DOCX using Cloudflare Workers AI
    */
-  private async extractTextFromDOCX(_content: ArrayBuffer): Promise<string> {
-    // For now, return a message asking user to copy-paste text
-    // In production, you'd integrate with a DOCX parsing library
-    throw new Error(
-      'Обработка DOCX пока не реализована. Пожалуйста, скопируйте и вставьте текст.'
-    );
+  private async extractTextFromDOCX(content: ArrayBuffer): Promise<string> {
+    if (!this.ai) {
+      throw new Error('AI сервис недоступен для обработки DOCX');
+    }
+
+    try {
+      const blob = new Blob([content], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+      
+      const results = await this.ai.toMarkdown([{
+        name: 'document.docx',
+        blob
+      }]);
+
+      if (results && results[0] && results[0].markdown) {
+        return this.markdownToText(results[0].markdown);
+      } else {
+        throw new Error('Не удалось извлечь текст из DOCX');
+      }
+    } catch (error) {
+      console.error('Error processing DOCX:', error);
+      throw new Error('Ошибка при обработке DOCX файла');
+    }
   }
 
   /**
@@ -117,6 +151,20 @@ export class DocumentService {
       wordCount,
       processedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Convert markdown output to clean text
+   */
+  private markdownToText(markdown: string): string {
+    // Remove markdown formatting but preserve structure
+    return markdown
+      .replace(/^#{1,6}\s+/gm, '') // Remove headers
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links
+      .replace(/\n\s*\n/g, '\n') // Clean extra newlines
+      .trim();
   }
 
   /**
