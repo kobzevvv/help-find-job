@@ -7,6 +7,8 @@
 - Mixed testing environments causing unreliable results
 - Deprecated GitHub Actions causing workflow failures
 - Automatic production deployments without safeguards
+- Cache key reference bugs causing cascading CI/CD failures
+- Disabled webhook security validation (commented out TODOs)
 
 ## Solution
 Refactored CI/CD pipeline with proper build order, artifact caching, and separated test environments.
@@ -202,6 +204,35 @@ uses: actions/upload-artifact@v4
 - `.github/workflows/quality-gates.yml`
 - `.github/workflows/deploy-staging.yml`
 - `.github/workflows/deploy-production.yml`
+
+## Recent Fixes (December 2024)
+
+### Cache Key Reference Bug
+**Problem:** Quality gates workflow had incorrect cache key reference causing "Input required and not supplied: key" errors.
+
+**Root Cause:**
+```yaml
+# BROKEN (quality-gates.yml line 70):
+cache-key: ${{ steps.cache-build.outputs.cache-primary-key }}  # ❌ cache-primary-key doesn't exist
+
+# FIXED:
+cache-key: ${{ steps.build-cache-key.outputs.cache-key }}     # ✅ Correct reference
+```
+
+**Impact:** This caused cascading failures:
+1. Quality gates fail → No build artifacts
+2. Staging deployment fails → Nothing to deploy  
+3. Production deployment fails → No valid staging
+
+### Webhook Security Re-enabled
+**Problem:** Webhook secret validation was disabled (commented out with TODOs) creating security vulnerability.
+
+**Fixed:**
+- Re-enabled webhook secret validation in `src/handlers/webhook.ts`
+- Validates `X-Telegram-Bot-Api-Secret-Token` header when webhook secret is configured
+- Gracefully handles missing webhook secret (no validation required)
+
+**Security Impact:** Prevents unauthorized webhook requests to bot endpoints.
 
 ## Emergency Procedures
 

@@ -39,6 +39,9 @@ This production-ready Telegram bot analyzes resume-job compatibility using GPT-4
 
 ## 🚀 Quick Start
 
+### **👋 New Developer?** 
+**➡️ Start here: [`docs/DEVELOPER_QUICK_START.md`](docs/DEVELOPER_QUICK_START.md)** ⬅️
+
 ### **Option A: Instant Testing** (Recommended)
 ```bash
 git clone https://github.com/kobzevvv/help-find-job.git
