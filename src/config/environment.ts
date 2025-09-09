@@ -5,6 +5,8 @@
  * Handles URLs, secrets classification, and environment-specific settings.
  */
 
+import { Env } from '../index';
+
 export interface EnvironmentConfig {
   // Environment identification
   environment: 'development' | 'staging' | 'production';
@@ -50,7 +52,7 @@ export interface EnvironmentConfig {
 export class EnvironmentConfigurationService {
   private config: EnvironmentConfig;
 
-  constructor(private env: any) {
+  constructor(private env: Env) {
     this.config = this.buildConfiguration();
   }
 

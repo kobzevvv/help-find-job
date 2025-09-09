@@ -185,7 +185,7 @@ export class WebhookHandler {
   /**
    * Validate update structure
    */
-  private isValidUpdate(update: any): update is TelegramUpdate {
+  private isValidUpdate(update: unknown): update is TelegramUpdate {
     return (
       typeof update === 'object' &&
       typeof update.update_id === 'number' &&

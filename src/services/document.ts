@@ -4,11 +4,18 @@
 
 import { ProcessedDocument } from '../types/session';
 
+// Cloudflare Workers AI interface for document processing
+interface WorkersAI {
+  toMarkdown(
+    documents: Array<{ name: string; blob: Blob }>
+  ): Promise<Array<{ markdown: string }>>;
+}
+
 export class DocumentService {
   private maxFileSizeMB: number;
-  private ai: any;
+  private ai: WorkersAI | undefined;
 
-  constructor(maxFileSizeMB: number = 10, ai?: any) {
+  constructor(maxFileSizeMB: number = 10, ai?: WorkersAI) {
     this.maxFileSizeMB = maxFileSizeMB;
     this.ai = ai;
   }
@@ -93,11 +100,13 @@ export class DocumentService {
 
     try {
       const blob = new Blob([content], { type: 'application/pdf' });
-      
-      const results = await this.ai.toMarkdown([{
-        name: 'document.pdf',
-        blob
-      }]);
+
+      const results = await this.ai.toMarkdown([
+        {
+          name: 'document.pdf',
+          blob,
+        },
+      ]);
 
       if (results && results[0] && results[0].markdown) {
         return this.markdownToText(results[0].markdown);
@@ -119,14 +128,16 @@ export class DocumentService {
     }
 
     try {
-      const blob = new Blob([content], { 
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      const blob = new Blob([content], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
-      
-      const results = await this.ai.toMarkdown([{
-        name: 'document.docx',
-        blob
-      }]);
+
+      const results = await this.ai.toMarkdown([
+        {
+          name: 'document.docx',
+          blob,
+        },
+      ]);
 
       if (results && results[0] && results[0].markdown) {
         return this.markdownToText(results[0].markdown);

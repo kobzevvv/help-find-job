@@ -8,6 +8,15 @@ import {
   ProcessedDocument,
 } from '../types/session';
 
+// OpenAI API response interface
+interface OpenAIResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
 export class AIService {
   private apiKey: string;
   private model: string;
@@ -223,7 +232,7 @@ Provide your analysis in this EXACT JSON format:
         return null;
       }
 
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as OpenAIResponse;
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {

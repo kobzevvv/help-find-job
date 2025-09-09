@@ -48,7 +48,11 @@ export interface Env {
   OPENAI_ORG_ID?: string;
 
   // 🆕 NEW Cloudflare Workers AI Configuration
-  AI?: any;
+  AI?: {
+    toMarkdown(
+      documents: Array<{ name: string; blob: Blob }>
+    ): Promise<Array<{ markdown: string }>>;
+  };
 
   // 🔄 EXISTING + NEW Admin Configuration
   ADMIN_PASSWORD?: string;

@@ -15,6 +15,10 @@ import { EnhancedAIService } from '../services/enhanced-ai';
 import { AdminAuthService } from '../services/admin-auth';
 import { ConversationHandler } from '../handlers/conversation';
 import { WebhookHandler } from '../handlers/webhook';
+import { Env } from '../index';
+
+// Type for service instances (broad type to accommodate various services)
+type ServiceInstance = object;
 
 export interface ServiceFactory<T> {
   create(container: ServiceContainer): Promise<T>;
@@ -25,7 +29,7 @@ export interface ServiceHealth {
   name: string;
   status: 'healthy' | 'unhealthy' | 'unknown';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ServiceInfo {
@@ -39,8 +43,8 @@ export interface ServiceInfo {
  * Main dependency injection container
  */
 export class ServiceContainer {
-  private services: Map<string, any> = new Map();
-  private factories: Map<string, ServiceFactory<any>> = new Map();
+  private services: Map<string, ServiceInstance> = new Map();
+  private factories: Map<string, ServiceFactory<ServiceInstance>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
 
@@ -233,7 +237,7 @@ export class ServiceContainer {
  * Create a configured service container
  */
 export async function createServiceContainer(
-  env: any
+  env: Env
 ): Promise<ServiceContainer> {
   const container = new ServiceContainer();
 
@@ -412,7 +416,18 @@ export async function createServiceContainer(
 /**
  * Load application configuration (environment-specific)
  */
-async function loadAppConfig(environment: string): Promise<any> {
+async function loadAppConfig(environment: string): Promise<{
+  admin: Record<
+    string,
+    {
+      authRequired: boolean;
+      openAccess: boolean;
+      sessionTimeoutHours: number;
+      maxLoginAttempts: number;
+      loginCooldownMinutes: number;
+    }
+  >;
+}> {
   // Environment-specific configuration
   const configs = {
     development: {

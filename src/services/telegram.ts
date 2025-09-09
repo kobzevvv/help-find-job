@@ -4,6 +4,18 @@
 
 import { SendMessageOptions, TelegramFile } from '../types/telegram';
 
+// Telegram API response interface
+interface TelegramApiResponse<T> {
+  ok: boolean;
+  result: T;
+}
+
+// Webhook payload interface
+interface WebhookPayload {
+  url: string;
+  secret_token?: string;
+}
+
 export class TelegramService {
   private botToken: string;
   private baseUrl: string;
@@ -63,7 +75,7 @@ export class TelegramService {
         return null;
       }
 
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as TelegramApiResponse<TelegramFile>;
       return data.result;
     } catch (error) {
       console.error('Error getting file info:', error);
@@ -96,7 +108,7 @@ export class TelegramService {
    */
   async setWebhook(url: string, secretToken?: string): Promise<boolean> {
     try {
-      const payload: any = { url };
+      const payload: WebhookPayload = { url };
       if (secretToken) {
         payload.secret_token = secretToken;
       }

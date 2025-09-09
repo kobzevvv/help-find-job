@@ -9,7 +9,13 @@ import { DocumentService } from '../services/document';
 import { AIService } from '../services/ai';
 import { EnhancedAIService } from '../services/enhanced-ai';
 import { LoggingService } from '../services/logging';
-import { EnhancedAnalysis } from '../types/session';
+import {
+  EnhancedAnalysis,
+  HeadlineAnalysis,
+  SkillsAnalysis,
+  ExperienceAnalysis,
+  JobConditionsAnalysis,
+} from '../types/session';
 
 export class ConversationHandler {
   private sessionService: SessionService;
@@ -576,7 +582,7 @@ export class ConversationHandler {
    */
   private async sendHeadlineAnalysis(
     chatId: number,
-    headlines: any
+    headlines: HeadlineAnalysis
   ): Promise<void> {
     const message = `🏷️ **АНАЛИЗ ЗАГОЛОВКОВ** (${headlines.matchScore}/100)
 
@@ -599,7 +605,10 @@ ${headlines.recommendations.length > 0 ? `💡 **Рекомендации:**\n${
   /**
    * Send skills analysis details
    */
-  private async sendSkillsAnalysis(chatId: number, skills: any): Promise<void> {
+  private async sendSkillsAnalysis(
+    chatId: number,
+    skills: SkillsAnalysis
+  ): Promise<void> {
     const message = `🛠️ **АНАЛИЗ НАВЫКОВ** (${skills.matchScore}/100)
 
 **Навыки из вакансии:** ${skills.requestedSkills.join(', ')}
@@ -626,7 +635,7 @@ ${skills.recommendations.length > 0 ? `💡 **Рекомендации:**\n${ski
    */
   private async sendExperienceAnalysis(
     chatId: number,
-    experience: any
+    experience: ExperienceAnalysis
   ): Promise<void> {
     const seniorityEmoji =
       experience.seniorityMatch === 'perfect-match'
@@ -670,7 +679,7 @@ ${experience.recommendations.length > 0 ? `💡 **Рекомендации:**\n$
    */
   private async sendJobConditionsAnalysis(
     chatId: number,
-    conditions: any
+    conditions: JobConditionsAnalysis
   ): Promise<void> {
     const locationEmoji = conditions.location.compatible ? '✅' : '❌';
     const salaryEmoji = conditions.salary.compatible ? '✅' : '❌';
