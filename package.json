@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "build": "tsc && wrangler deploy --dry-run",
+    "build:ci": "tsc",
     "deploy:dev": "wrangler deploy --env development",
     "deploy:staging": "wrangler deploy --env staging", 
     "deploy:prod": "wrangler deploy --env production",

@@ -34,6 +34,9 @@ jobs:
       - name: Unit & Integration Tests
         run: npm run test:unit && npm run test:integration
 
+      - name: Build (compile TS)
+        run: npm run build:ci
+
       - name: E2E Tests (no secrets)
         env:
           OPENAI_API_KEY: ''
