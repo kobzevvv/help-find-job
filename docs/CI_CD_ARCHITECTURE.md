@@ -2,9 +2,11 @@
 
 ## Problem
 - Tests run before TypeScript compilation, causing failures
-- Inconsistent build processes across workflows
+- Inconsistent build processes across workflows  
 - No artifact caching, leading to slow deployments
 - Mixed testing environments causing unreliable results
+- Deprecated GitHub Actions causing workflow failures
+- Automatic production deployments without safeguards
 
 ## Solution
 Refactored CI/CD pipeline with proper build order, artifact caching, and separated test environments.
@@ -127,7 +129,13 @@ tests/setup/
 ### Production Deployment (`deploy-production.yml`)
 
 **Triggers:**
-- Manual dispatch only
+- Manual dispatch only (safer than automatic deployment)
+
+**Why Manual Only?**
+- Prevents accidental production deployments
+- Requires explicit deployment reason and approval
+- Allows validation of staging environment first
+- Provides better audit trail and control
 
 **Process:**
 1. Pre-Deployment Validation (validate commit, check staging status, timing validation)
@@ -147,17 +155,44 @@ Key changes:
 
 ### Activation Steps
 1. Test locally: `npm run test:all && npm run build:ci`
-2. Run validation script: `./scripts/migrate-to-ci-refactor.sh`
+2. Run validation script: `./scripts/migrate-to-ci-refactor.sh` 
 3. The refactored workflows are already active:
    - `deploy-staging.yml` - New staging deployment
-   - `deploy-production.yml` - New production deployment  
-   - Legacy workflows preserved as `*-legacy.yml`
+   - `deploy-production.yml` - New production deployment (manual trigger)
+   - Legacy workflows removed for security
 
 ### Benefits
 - Fixes build order issue (tests after compilation)
 - Faster deployments through artifact caching
 - Proper test environment separation
 - Manual production approval for safety
+
+## GitHub Actions Maintenance
+
+### Deprecated Actions Updates
+The system uses current GitHub Actions versions to avoid deprecation warnings:
+
+- ✅ `actions/upload-artifact@v4` (was v3, deprecated April 2024)
+- ✅ `actions/cache@v4` (was v3)  
+- ✅ `cloudflare/wrangler-action@v3` (latest available)
+
+### Common GitHub Actions Issues
+
+**Error:** `This request has been automatically failed because it uses a deprecated version of actions/upload-artifact: v3`
+
+**Solution:** Update to v4 in all workflow files:
+```yaml
+# OLD (deprecated)
+uses: actions/upload-artifact@v3
+
+# NEW (current)  
+uses: actions/upload-artifact@v4
+```
+
+**Files to check:**
+- `.github/workflows/quality-gates.yml`
+- `.github/workflows/deploy-staging.yml`
+- `.github/workflows/deploy-production.yml`
 
 ## Emergency Procedures
 

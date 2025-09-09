@@ -1,6 +1,6 @@
 # 🚀 Production Deployment Guide
 
-## New Deployment Process (v2)
+## Manual Deployment Process
 
 The production deployment is now **manual-only** for enhanced safety and control.
 
@@ -49,14 +49,31 @@ wrangler rollback --env production
 ```
 
 ### Emergency Deployment
-Use the **"Skip staging validation"** option only for critical fixes.
+For critical fixes that can't wait for staging validation:
+1. Go to Actions → Deploy to Production
+2. Check **"Skip staging validation"** 
+3. Provide clear emergency reason
+4. Deploy immediately
 
-## Previous Automatic Deployment
+**⚠️ Only use for genuine emergencies!**
 
-The old workflow that deployed automatically on every push to `main` has been replaced with this safer manual process. This prevents:
-- Accidental production deployments
-- Untested code reaching users
-- Deploy conflicts during development
+## Why Manual Deployment?
+
+Production deployment is now **manual-only** instead of automatic. This safer approach prevents:
+- Accidental production deployments from every push
+- Untested code reaching users automatically
+- Deploy conflicts during active development
+- GitHub Actions deprecation warnings causing failed deployments
+
+## Troubleshooting
+
+### GitHub Actions Errors
+If you see: `This request has been automatically failed because it uses a deprecated version of actions/upload-artifact: v3`
+
+**This has been fixed** - all workflows now use current GitHub Actions versions (v4).
+
+### Production Deployment Not Running Automatically
+This is **by design**. Production deployments require manual approval for safety.
 
 ---
 
