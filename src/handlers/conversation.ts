@@ -107,7 +107,7 @@ export class ConversationHandler {
       await this.loggingService.logError('MESSAGE_HANDLER_ERROR', 'Error in message handler', error as Error, userId, chatId);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Sorry, something went wrong. Please try again.',
+        text: '❌ Что-то пошло не так. Пожалуйста, попробуйте ещё раз.',
       });
     }
   }
@@ -139,7 +139,15 @@ export class ConversationHandler {
         break;
 
       case 'waiting_resume':
-        await this.handleResumeText(text, chatId, userId);
+        if (['done', 'готово'].includes(text.trim().toLowerCase())) {
+          await this.sessionService.updateState(userId, 'waiting_job_post');
+          await this.telegramService.sendMessage({
+            chat_id: chatId,
+            text: '✅ Спасибо! Я получил ваше резюме. Теперь пришлите текст вакансии (можно в одном или нескольких сообщениях).',
+          });
+        } else {
+          await this.handleResumeText(text, chatId, userId);
+        }
         break;
 
       case 'waiting_job_post':
@@ -149,7 +157,7 @@ export class ConversationHandler {
       case 'processing':
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '⏳ Please wait, I\'m still processing your documents...',
+          text: '⏳ Пожалуйста, подождите. Я всё ещё обрабатываю ваши документы...',
         });
         break;
 
@@ -169,7 +177,7 @@ export class ConversationHandler {
     if (currentState !== 'waiting_resume' && currentState !== 'waiting_job_post') {
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ I\'m not expecting a document right now. Please start with /resume_and_job_post_match',
+        text: '❌ Сейчас я не жду документ. Пожалуйста, начните с команды /resume_and_job_post_match',
       });
       return;
     }
@@ -178,12 +186,12 @@ export class ConversationHandler {
       // Download and process document
       const fileInfo = await this.telegramService.getFile(document.file_id);
       if (!fileInfo?.file_path) {
-        throw new Error('Could not get file information');
+        throw new Error('Не удалось получить информацию о файле');
       }
 
       const fileContent = await this.telegramService.downloadFile(fileInfo.file_path);
       if (!fileContent) {
-        throw new Error('Could not download file');
+        throw new Error('Не удалось скачать файл');
       }
 
       const processedDocument = await this.documentService.processDocument(
@@ -193,7 +201,7 @@ export class ConversationHandler {
       );
 
       if (!processedDocument) {
-        throw new Error('Could not process document');
+        throw new Error('Не удалось обработать документ');
       }
 
       const validation = this.documentService.validateDocument(processedDocument);
@@ -210,9 +218,16 @@ export class ConversationHandler {
         await this.sessionService.addResume(userId, processedDocument);
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '✅ Resume received! Now please send me the job posting (you can copy and paste the text).',
+          text: '✅ Resume file received. You can upload more files or paste more resume text. When finished, confirm below:',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ Done with resume', callback_data: 'resume_done' },
+              { text: '❌ Cancel', callback_data: 'cancel' }
+            ]]
+          }
         });
       } else if (currentState === 'waiting_job_post') {
+        // In the explicit-confirmation flow, any content here is treated as job post
         await this.sessionService.addJobPost(userId, processedDocument);
         await this.startAnalysis(chatId, userId);
       }
@@ -221,7 +236,7 @@ export class ConversationHandler {
       console.error('Error processing document:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: `❌ Sorry, I couldn't process that document: ${error}. Please try copying and pasting the text instead.`,
+        text: `❌ Не получилось обработать документ: ${error}. Пожалуйста, попробуйте скопировать и вставить текст.`,
       });
     }
   }
@@ -295,7 +310,7 @@ export class ConversationHandler {
     await this.sessionService.updateState(userId, 'waiting_resume');
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '📄 I\'ll help you analyze how well your resume matches a job description!\n\nPlease send me your resume first. You can:\n• Upload a PDF or DOCX file\n• Copy and paste the text directly\n\n💡 Tip: Text format usually works better!',
+      text: '📄 Я помогу проанализировать, насколько ваше резюме соответствует вакансии!\n\nПожалуйста, отправьте своё резюме. Можно:\n• Прикрепить файл или вставить текст в нескольких сообщениях\n\nКогда завершите отправку всех частей резюме, нажмите кнопку ниже «Готово с резюме» или напишите: \n\n✅ готово\n\nПосле этого я попрошу отправить текст вакансии.',
     });
   }
 
@@ -315,10 +330,43 @@ export class ConversationHandler {
         return;
       }
 
+      // Append resume content while in waiting_resume
+      const session = await this.sessionService.getSession(userId);
+      if (session?.resume && session.state === 'waiting_resume') {
+        const mergedText = `${session.resume.text}\n\n${processedDocument.text}`;
+        const mergedResume = this.documentService.processTextInput(mergedText);
+        const mergedValidation = this.documentService.validateDocument(mergedResume);
+        if (!mergedValidation.isValid) {
+          await this.telegramService.sendMessage({
+            chat_id: chatId,
+            text: `❌ ${mergedValidation.error}`,
+          });
+          return;
+        }
+        await this.sessionService.addResume(userId, mergedResume);
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: '🧩 Added more resume content. When finished, confirm below:',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ Done with resume', callback_data: 'resume_done' },
+              { text: '❌ Cancel', callback_data: 'cancel' }
+            ]]
+          }
+        });
+        return;
+      }
+
       await this.sessionService.addResume(userId, processedDocument);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '✅ Resume received! Now please send me the job posting text.',
+        text: '✅ Resume received. You can send more resume parts if needed. When finished, confirm below:',
+        reply_markup: {
+          inline_keyboard: [[
+            { text: '✅ Done with resume', callback_data: 'resume_done' },
+            { text: '❌ Cancel', callback_data: 'cancel' }
+          ]]
+        }
       });
 
     } catch (error) {
@@ -346,6 +394,7 @@ export class ConversationHandler {
         return;
       }
 
+      // In explicit-confirmation mode, anything here is treated as job post
       await this.sessionService.addJobPost(userId, processedDocument);
       await this.startAnalysis(chatId, userId);
 
@@ -362,16 +411,35 @@ export class ConversationHandler {
    * Start AI analysis using enhanced service
    */
   private async startAnalysis(chatId: number, userId: number): Promise<void> {
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
-      text: '🔄 Performing comprehensive resume analysis...\n\nThis will analyze:\n• Headlines & Job Titles\n• Skills Match\n• Experience Alignment\n• Job Conditions\n\nThis may take 60-90 seconds.',
-    });
-
     try {
-      const session = await this.sessionService.getSession(userId);
-      if (!session?.resume || !session?.jobPost) {
-        throw new Error('Missing resume or job post data');
+      // Fetch session with retries to handle KV eventual consistency after recent writes
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      let session = await this.sessionService.getSession(userId);
+      let attempt = 0;
+      const maxAttempts = 5; // ~3 seconds total with exponential backoff
+      while ((!session?.resume || !session?.jobPost) && attempt < maxAttempts) {
+        await delay(200 * Math.pow(2, attempt));
+        attempt++;
+        session = await this.sessionService.getSession(userId);
       }
+
+      if (!session?.resume || !session?.jobPost) {
+        // If still missing, guide the user and return without failing the whole flow
+        const missing = !session?.resume ? 'resume' : 'job post';
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: `❌ Missing ${missing} data. Please send your ${missing} to start the analysis.`,
+        });
+        // Put the session back into the appropriate waiting state
+        await this.sessionService.updateState(userId, !session?.resume ? 'waiting_resume' : 'waiting_job_post');
+        return;
+      }
+
+      // Announce analysis only after we've confirmed both documents are present
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '🔄 Performing comprehensive resume analysis...\n\nThis will analyze:\n• Headlines & Job Titles\n• Skills Match\n• Experience Alignment\n• Job Conditions\n\nThis may take 60-90 seconds.',
+      });
 
       console.log('Starting enhanced analysis for user:', userId);
       const enhancedAnalysis = await this.enhancedAIService.analyzeResumeJobMatch(session.resume, session.jobPost);

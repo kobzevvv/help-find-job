@@ -17,6 +17,7 @@ export class EnhancedAIService {
   private model: string;
   private maxTokens: number;
   private temperature: number;
+  private readonly maxInputChars: number = 20000;
 
   constructor(
     apiKey: string,
@@ -87,14 +88,16 @@ export class EnhancedAIService {
    * Analyze job title vs candidate experience titles
    */
   private async analyzeHeadlines(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<HeadlineAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
 Analyze the JOB TITLE and POSITION TITLES match between this resume and job posting.
 
 RESUME:
-${resume.text}
+${resumeText}
 
 JOB POSTING:
-${jobPost.text}
+${jobText}
 
 Your task is to:
 1. Extract the main job title from the job posting
@@ -128,14 +131,16 @@ Respond in this EXACT JSON format:
    * Analyze skills match with detailed breakdown
    */
   private async analyzeSkills(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<SkillsAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
 Analyze the SKILLS match between this resume and job posting with detailed breakdown.
 
 RESUME:
-${resume.text}
+${resumeText}
 
 JOB POSTING:
-${jobPost.text}
+${jobText}
 
 Your task is to:
 1. Extract all explicitly requested skills from the job posting
@@ -174,14 +179,16 @@ Respond in this EXACT JSON format:
    * Analyze experience with seniority and quantity assessment
    */
   private async analyzeExperience(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<ExperienceAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
 Analyze the WORK EXPERIENCE match between this resume and job posting with seniority assessment.
 
 RESUME:
-${resume.text}
+${resumeText}
 
 JOB POSTING:
-${jobPost.text}
+${jobText}
 
 Your task is to:
 1. Extract what the candidate has done (past experience)
@@ -222,14 +229,16 @@ Respond in this EXACT JSON format:
    * Analyze job conditions compatibility
    */
   private async analyzeJobConditions(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<JobConditionsAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
 Analyze JOB CONDITIONS compatibility between this resume and job posting.
 
 RESUME:
-${resume.text}
+${resumeText}
 
 JOB POSTING:
-${jobPost.text}
+${jobText}
 
 Your task is to extract and compare:
 1. Location requirements vs candidate location
@@ -303,6 +312,8 @@ Respond in this EXACT JSON format:
               content: prompt
             }
           ],
+          // Prefer JSON mode when supported by the model
+          ...(this.supportsJsonMode() ? { response_format: { type: 'json_object' } } : {}),
           max_tokens: this.maxTokens,
           temperature: this.temperature,
         }),
@@ -322,21 +333,71 @@ Respond in this EXACT JSON format:
         return null;
       }
 
-      // Parse JSON response with error handling
-      try {
-        const result = JSON.parse(content);
+      // Parse JSON response with error handling and code-fence support
+      const parsed = this.parseJsonContent(content, category);
+      if (parsed !== null) {
         console.log(`Successfully parsed ${category} analysis result`);
-        return result;
-      } catch (parseError) {
-        console.error(`Failed to parse JSON for ${category}:`, parseError);
-        console.error('Raw content:', content);
-        return null;
+        return parsed;
       }
+      return null;
 
     } catch (error) {
       console.error(`Error in ${category} analysis:`, error);
       return null;
     }
+  }
+
+  /**
+   * Attempt to parse JSON from model output, handling code fences and extra text
+   */
+  private parseJsonContent(content: string, category: string): any | null {
+    // Fast path
+    try {
+      return JSON.parse(content);
+    } catch {}
+
+    // Strip code fences if present
+    const fencedMatch = content.match(/```(?:json)?\n([\s\S]*?)\n```/i);
+    if (fencedMatch && fencedMatch[1]) {
+      try {
+        return JSON.parse(fencedMatch[1]);
+      } catch (err) {
+        console.error(`JSON parse failed for ${category} after removing code fences:`);
+      }
+    }
+
+    // Try to extract the largest JSON object substring
+    const firstBrace = content.indexOf('{');
+    const lastBrace = content.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonSlice = content.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(jsonSlice);
+      } catch (err) {
+        console.error(`JSON slice parse failed for ${category}. Slice length: ${jsonSlice.length}`);
+      }
+    }
+
+    console.error(`Failed to parse JSON for ${category}. Content preview:`, content.slice(0, 500));
+    return null;
+  }
+
+  /**
+   * Whether the current model supports response_format: json_object
+   */
+  private supportsJsonMode(): boolean {
+    const m = (this.model || '').toLowerCase();
+    return m.includes('gpt-4o') || m.includes('4.1') || m.includes('o3') || m.includes('mini');
+  }
+
+  /**
+   * Truncate very long inputs to reduce token usage and avoid API errors
+   */
+  private truncateText(text: string): string {
+    if (!text) return '';
+    if (text.length <= this.maxInputChars) return text;
+    const truncated = text.slice(0, this.maxInputChars);
+    return `${truncated}`;
   }
 
   /**

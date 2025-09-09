@@ -62,7 +62,7 @@ export class SessionService {
       state: 'idle',
       createdAt: now,
       lastActivity: now,
-      language: language || 'en',
+      language: language || 'ru',
     };
   }
 
@@ -89,7 +89,7 @@ export class SessionService {
     }
 
     session.resume = document;
-    session.state = 'waiting_job_post';
+    // Stay in waiting_resume until user confirms with 'done'
     return await this.saveSession(session);
   }
 
