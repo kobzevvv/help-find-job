@@ -2,7 +2,7 @@
  * User session and conversation state types
  */
 
-export type ConversationState = 
+export type ConversationState =
   | 'idle'
   | 'waiting_resume'
   | 'waiting_job_post'

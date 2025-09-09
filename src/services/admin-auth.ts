@@ -37,10 +37,11 @@ export class AdminAuthService {
     this.kv = kv;
     this.environment = environment;
     this.adminPassword = adminPassword;
-    
+
     // Environment-specific configuration
     const adminConfig = config.admin?.[environment] || {};
-    this.authRequired = adminConfig.authRequired ?? (environment === 'production');
+    this.authRequired =
+      adminConfig.authRequired ?? environment === 'production';
     this.maxLoginAttempts = adminConfig.maxLoginAttempts ?? 3;
     this.loginCooldownMinutes = adminConfig.loginCooldownMinutes ?? 15;
     this.sessionTimeoutHours = adminConfig.sessionTimeoutHours ?? 24;
@@ -85,7 +86,7 @@ export class AdminAuthService {
     try {
       const sessionKey = `admin_session:${userId}:${this.environment}`;
       const sessionData = await this.kv.get(sessionKey);
-      
+
       if (!sessionData) {
         return false;
       }
@@ -110,9 +111,16 @@ export class AdminAuthService {
   /**
    * Authenticate admin with password
    */
-  async authenticate(userId: number, chatId: number, password: string): Promise<{ success: boolean; message: string; cooldownMinutes?: number }> {
+  async authenticate(
+    userId: number,
+    chatId: number,
+    password: string
+  ): Promise<{ success: boolean; message: string; cooldownMinutes?: number }> {
     if (!this.authRequired) {
-      return { success: true, message: 'Authentication not required in this environment' };
+      return {
+        success: true,
+        message: 'Authentication not required in this environment',
+      };
     }
 
     if (!this.adminPassword) {
@@ -122,10 +130,11 @@ export class AdminAuthService {
     // Check for cooldown
     const cooldownResult = await this.checkCooldown(userId);
     if (!cooldownResult.allowed) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: `Too many login attempts. Please wait ${cooldownResult.remainingMinutes} minutes.`,
-        cooldownMinutes: cooldownResult.remainingMinutes || this.loginCooldownMinutes
+        cooldownMinutes:
+          cooldownResult.remainingMinutes || this.loginCooldownMinutes,
       };
     }
 
@@ -134,18 +143,18 @@ export class AdminAuthService {
       await this.recordFailedAttempt(userId);
       const attempts = await this.getLoginAttempts(userId);
       const remainingAttempts = this.maxLoginAttempts - attempts;
-      
+
       if (remainingAttempts <= 0) {
-        return { 
-          success: false, 
+        return {
+          success: false,
           message: `Invalid password. Maximum attempts reached. Please wait ${this.loginCooldownMinutes} minutes.`,
-          cooldownMinutes: this.loginCooldownMinutes
+          cooldownMinutes: this.loginCooldownMinutes,
         };
       }
-      
-      return { 
-        success: false, 
-        message: `Invalid password. ${remainingAttempts} attempts remaining.`
+
+      return {
+        success: false,
+        message: `Invalid password. ${remainingAttempts} attempts remaining.`,
       };
     }
 
@@ -153,9 +162,9 @@ export class AdminAuthService {
     await this.createSession(userId, chatId);
     await this.clearLoginAttempts(userId);
 
-    return { 
-      success: true, 
-      message: `✅ Admin authenticated successfully! Access granted for ${this.sessionTimeoutHours} hours.`
+    return {
+      success: true,
+      message: `✅ Admin authenticated successfully! Access granted for ${this.sessionTimeoutHours} hours.`,
     };
   }
 
@@ -201,7 +210,7 @@ export class AdminAuthService {
     try {
       const sessionKey = `admin_session:${userId}:${this.environment}`;
       const sessionData = await this.kv.get(sessionKey);
-      
+
       if (!sessionData) {
         return null;
       }
@@ -220,42 +229,46 @@ export class AdminAuthService {
     if (!this.kv) return;
 
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + (this.sessionTimeoutHours * 60 * 60 * 1000));
+    const expiresAt = new Date(
+      now.getTime() + this.sessionTimeoutHours * 60 * 60 * 1000
+    );
 
     const session: AdminSession = {
       userId,
       chatId,
       authenticatedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
-      environment: this.environment
+      environment: this.environment,
     };
 
     const sessionKey = `admin_session:${userId}:${this.environment}`;
     await this.kv.put(sessionKey, JSON.stringify(session), {
-      expirationTtl: this.sessionTimeoutHours * 60 * 60
+      expirationTtl: this.sessionTimeoutHours * 60 * 60,
     });
   }
 
   /**
    * Check if user is in cooldown period
    */
-  private async checkCooldown(userId: number): Promise<{ allowed: boolean; remainingMinutes?: number }> {
+  private async checkCooldown(
+    userId: number
+  ): Promise<{ allowed: boolean; remainingMinutes?: number }> {
     if (!this.kv) return { allowed: true };
 
     try {
       const attemptKey = `login_attempts:${userId}:${this.environment}`;
       const attemptData = await this.kv.get(attemptKey);
-      
+
       if (!attemptData) {
         return { allowed: true };
       }
 
       const attempt: LoginAttempt = JSON.parse(attemptData);
-      
+
       if (attempt.cooldownUntil) {
         const now = new Date();
         const cooldownUntil = new Date(attempt.cooldownUntil);
-        
+
         if (now < cooldownUntil) {
           const remainingMs = cooldownUntil.getTime() - now.getTime();
           const remainingMinutes = Math.ceil(remainingMs / (1000 * 60));
@@ -279,7 +292,7 @@ export class AdminAuthService {
     try {
       const attemptKey = `login_attempts:${userId}:${this.environment}`;
       const existingData = await this.kv.get(attemptKey);
-      
+
       let attempt: LoginAttempt;
       if (existingData) {
         attempt = JSON.parse(existingData);
@@ -288,7 +301,7 @@ export class AdminAuthService {
         attempt = {
           userId,
           attempts: 1,
-          lastAttemptAt: new Date().toISOString()
+          lastAttemptAt: new Date().toISOString(),
         };
       }
 
@@ -297,12 +310,14 @@ export class AdminAuthService {
       // If max attempts reached, set cooldown
       if (attempt.attempts >= this.maxLoginAttempts) {
         const cooldownUntil = new Date();
-        cooldownUntil.setMinutes(cooldownUntil.getMinutes() + this.loginCooldownMinutes);
+        cooldownUntil.setMinutes(
+          cooldownUntil.getMinutes() + this.loginCooldownMinutes
+        );
         attempt.cooldownUntil = cooldownUntil.toISOString();
       }
 
       await this.kv.put(attemptKey, JSON.stringify(attempt), {
-        expirationTtl: this.loginCooldownMinutes * 60
+        expirationTtl: this.loginCooldownMinutes * 60,
       });
     } catch (error) {
       console.error('Error recording failed attempt:', error);
@@ -318,7 +333,7 @@ export class AdminAuthService {
     try {
       const attemptKey = `login_attempts:${userId}:${this.environment}`;
       const attemptData = await this.kv.get(attemptKey);
-      
+
       if (!attemptData) {
         return 0;
       }

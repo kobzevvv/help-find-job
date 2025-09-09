@@ -29,7 +29,12 @@ export class TelegramService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to send message:', errorText);
-        console.error('Chat ID:', options.chat_id, 'Text length:', options.text?.length);
+        console.error(
+          'Chat ID:',
+          options.chat_id,
+          'Text length:',
+          options.text?.length
+        );
         return false;
       }
 
@@ -58,7 +63,7 @@ export class TelegramService {
         return null;
       }
 
-      const data = await response.json() as any;
+      const data = (await response.json()) as any;
       return data.result;
     } catch (error) {
       console.error('Error getting file info:', error);

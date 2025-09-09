@@ -1,6 +1,6 @@
 /**
  * Telegram Resume Matcher Bot - Main Entry Point
- * 
+ *
  * This is the main entry point for the Cloudflare Workers-based Telegram bot
  * that analyzes resume-job description compatibility using AI.
  */
@@ -87,41 +87,50 @@ export interface Env {
  * Initialize services using dependency injection container
  */
 async function initializeServices(env: Env) {
-  console.log('🔧 Initializing services with dependency injection container...');
-  
+  console.log(
+    '🔧 Initializing services with dependency injection container...'
+  );
+
   // 🆕 NEW: Create and configure service container
   const container = await createServiceContainer(env);
-  
+
   // Get configuration service for validation and logging
-  const configService = await container.get<EnvironmentConfigurationService>('config');
-  
+  const configService =
+    await container.get<EnvironmentConfigurationService>('config');
+
   // 🆕 NEW: Validate configuration and log results
   const validationResults = configService.validate();
   if (validationResults.length > 0) {
-    console.log('⚠️ Configuration validation results:', 
-      JSON.stringify(validationResults, null, 2));
+    console.log(
+      '⚠️ Configuration validation results:',
+      JSON.stringify(validationResults, null, 2)
+    );
   }
 
   // 🆕 NEW: Log masked configuration for debugging
-  console.log('🔧 Configuration loaded:', 
-    JSON.stringify(configService.getMaskedConfig(), null, 2));
+  console.log(
+    '🔧 Configuration loaded:',
+    JSON.stringify(configService.getMaskedConfig(), null, 2)
+  );
 
   // Initialize core services (dependencies will be resolved automatically)
   const sessionService = await container.get<SessionService>('session');
   const telegramService = await container.get<TelegramService>('telegram');
   const documentService = await container.get<DocumentService>('document');
   const aiService = await container.get<AIService>('ai');
-  const enhancedAIService = await container.get<EnhancedAIService>('enhancedAI');
+  const enhancedAIService =
+    await container.get<EnhancedAIService>('enhancedAI');
   const loggingService = await container.get<LoggingService>('logging');
   const adminAuthService = await container.get<AdminAuthService>('adminAuth');
-  const conversationHandler = await container.get<ConversationHandler>('conversation');
+  const conversationHandler =
+    await container.get<ConversationHandler>('conversation');
   const webhookHandler = await container.get<WebhookHandler>('webhook');
 
   console.log('✅ All services initialized via dependency injection container');
 
   return {
-    container,        // 🆕 NEW: Return container for advanced usage
-    configService,    // 🔄 KEEP: Still needed for endpoints
+    container, // 🆕 NEW: Return container for advanced usage
+    configService, // 🔄 KEEP: Still needed for endpoints
     sessionService,
     telegramService,
     documentService,
@@ -138,73 +147,95 @@ async function initializeServices(env: Env) {
  * Main Worker request handler
  */
 export default {
-  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    _ctx: ExecutionContext
+  ): Promise<Response> {
     try {
       const url = new URL(request.url);
-      
+
       // Health check endpoint
       if (url.pathname === '/health') {
         const services = await initializeServices(env);
         const configService = services.configService;
         const validationResults = configService.validate();
-        
-        return new Response(JSON.stringify({ 
-          status: validationResults.some(r => r.status === 'error') ? 'unhealthy' : 'healthy',
-          timestamp: new Date().toISOString(),
-          version: '1.0.0',
-          configuration: configService.getMaskedConfig(),
-          validation: validationResults,
-          // 🔄 LEGACY: Keep old fields for compatibility
-          environment: configService.getEnvironment(),
-          botTokenPresent: !!configService.getTelegramConfig().botToken,
-          botTokenLength: configService.getTelegramConfig().botToken?.length || 0,
-          webhookSecretPresent: !!configService.getTelegramConfig().webhookSecret
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
+
+        return new Response(
+          JSON.stringify({
+            status: validationResults.some((r) => r.status === 'error')
+              ? 'unhealthy'
+              : 'healthy',
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            configuration: configService.getMaskedConfig(),
+            validation: validationResults,
+            // 🔄 LEGACY: Keep old fields for compatibility
+            environment: configService.getEnvironment(),
+            botTokenPresent: !!configService.getTelegramConfig().botToken,
+            botTokenLength:
+              configService.getTelegramConfig().botToken?.length || 0,
+            webhookSecretPresent:
+              !!configService.getTelegramConfig().webhookSecret,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
 
-      // Fix webhook endpoint 
+      // Fix webhook endpoint
       if (url.pathname === '/fix-webhook' && request.method === 'POST') {
         try {
           const webhookUrl = `${url.origin}/webhook`;
-          
+
           // 🔄 UPDATED: Use configuration service for bot token
           const configService = new EnvironmentConfigurationService(env);
           const botToken = configService.getTelegramConfig().botToken;
-          
+
           // Set webhook using our bot token
-          const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              url: webhookUrl,
-              allowed_updates: ['message', 'callback_query'],
-              drop_pending_updates: true
-            })
-          });
-          
+          const response = await fetch(
+            `https://api.telegram.org/bot${botToken}/setWebhook`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: webhookUrl,
+                allowed_updates: ['message', 'callback_query'],
+                drop_pending_updates: true,
+              }),
+            }
+          );
+
           const result = await response.json();
-          
+
           // Also get current status
-          const infoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+          const infoResponse = await fetch(
+            `https://api.telegram.org/bot${botToken}/getWebhookInfo`
+          );
           const info = await infoResponse.json();
-          
-          return new Response(JSON.stringify({
-            setWebhookResult: result,
-            currentWebhookInfo: info,
-            expectedUrl: webhookUrl
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+
+          return new Response(
+            JSON.stringify({
+              setWebhookResult: result,
+              currentWebhookInfo: info,
+              expectedUrl: webhookUrl,
+            }),
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         } catch (error) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         }
       }
 
@@ -215,35 +246,43 @@ export default {
           const configService = services.configService;
           const config = configService.getConfig();
           const testChatId = 12345; // Test chat ID
-          
+
           // Test the bot token first
-          const botInfo = await fetch(`https://api.telegram.org/bot${config.telegram.botToken}/getMe`);
+          const botInfo = await fetch(
+            `https://api.telegram.org/bot${config.telegram.botToken}/getMe`
+          );
           const botResult = await botInfo.json();
-          
+
           // Test sending a message
           const result = await services.telegramService.sendMessage({
             chat_id: testChatId,
-            text: '🧪 Debug test message from staging bot'
+            text: '🧪 Debug test message from staging bot',
           });
-          
-          return new Response(JSON.stringify({
-            success: true,
-            botInfo: botResult,
-            messageResult: result,
-            botTokenLength: config.telegram.botToken?.length || 0,
-            environment: config.environment
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              botInfo: botResult,
+              messageResult: result,
+              botTokenLength: config.telegram.botToken?.length || 0,
+              environment: config.environment,
+            }),
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         } catch (error) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack : undefined,
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         }
       }
 
@@ -273,7 +312,10 @@ export default {
       }
 
       // 🆕 NEW: Configuration validation endpoint
-      if (url.pathname === '/validate-environment' && request.method === 'GET') {
+      if (
+        url.pathname === '/validate-environment' &&
+        request.method === 'GET'
+      ) {
         return await handleValidateEnvironment(env);
       }
 
@@ -283,45 +325,53 @@ export default {
       }
 
       // Default response for unhandled routes
-      return new Response(JSON.stringify({
-        error: 'Not Found',
-        message: 'The requested endpoint was not found.'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-
+      return new Response(
+        JSON.stringify({
+          error: 'Not Found',
+          message: 'The requested endpoint was not found.',
+        }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     } catch (error) {
       console.error('Worker error:', error);
-      
-      return new Response(JSON.stringify({
-        error: 'Internal Server Error',
-        message: 'An unexpected error occurred.',
-        ...(env.DEBUG_LOGGING === 'true' && { details: String(error) })
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: 'Internal Server Error',
+          message: 'An unexpected error occurred.',
+          ...(env.DEBUG_LOGGING === 'true' && { details: String(error) }),
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   },
 
   /**
    * Scheduled event handler for cleanup tasks
    */
-  async scheduled(event: ScheduledEvent, _env: Env, _ctx: ExecutionContext): Promise<void> {
+  async scheduled(
+    event: ScheduledEvent,
+    _env: Env,
+    _ctx: ExecutionContext
+  ): Promise<void> {
     try {
       console.log('Scheduled task executed:', event.scheduledTime);
-      
+
       // TODO: Implement session cleanup and maintenance tasks
       // For example:
       // - Clean up expired sessions
-      // - Generate analytics reports  
+      // - Generate analytics reports
       // - Health checks on external services
-      
     } catch (error) {
       console.error('Scheduled task error:', error);
     }
-  }
+  },
 };
 
 /**
@@ -329,41 +379,52 @@ export default {
  */
 async function handleSetWebhook(request: Request, env: Env): Promise<Response> {
   try {
-    const body = await request.json() as { url: string };
+    const body = (await request.json()) as { url: string };
     const webhookUrl = body.url;
 
     if (!webhookUrl) {
-      return new Response(JSON.stringify({
-        error: 'Missing webhook URL'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Missing webhook URL',
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
-    // 🔄 UPDATED: Use configuration service  
+    // 🔄 UPDATED: Use configuration service
     const configService = new EnvironmentConfigurationService(env);
     const config = configService.getConfig();
-    
+
     const telegramService = new TelegramService(config.telegram.botToken);
-    const success = await telegramService.setWebhook(webhookUrl, config.telegram.webhookSecret || undefined);
+    const success = await telegramService.setWebhook(
+      webhookUrl,
+      config.telegram.webhookSecret || undefined
+    );
 
-    return new Response(JSON.stringify({
-      success,
-      message: success ? 'Webhook set successfully' : 'Failed to set webhook'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success,
+        message: success ? 'Webhook set successfully' : 'Failed to set webhook',
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error) {
     console.error('Set webhook error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to set webhook',
-      details: String(error)
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to set webhook',
+        details: String(error),
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
@@ -375,26 +436,33 @@ async function handleDeleteWebhook(env: Env): Promise<Response> {
     // 🔄 UPDATED: Use configuration service
     const configService = new EnvironmentConfigurationService(env);
     const config = configService.getConfig();
-    
+
     const telegramService = new TelegramService(config.telegram.botToken);
     const success = await telegramService.deleteWebhook();
 
-    return new Response(JSON.stringify({
-      success,
-      message: success ? 'Webhook deleted successfully' : 'Failed to delete webhook'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success,
+        message: success
+          ? 'Webhook deleted successfully'
+          : 'Failed to delete webhook',
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error) {
     console.error('Delete webhook error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to delete webhook',
-      details: String(error)
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to delete webhook',
+        details: String(error),
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
@@ -404,40 +472,48 @@ async function handleDeleteWebhook(env: Env): Promise<Response> {
 async function handleGetLogs(env: Env): Promise<Response> {
   try {
     if (!env.LOGS_DB) {
-      return new Response(JSON.stringify({
-        error: 'Logs database not available'
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Logs database not available',
+        }),
+        {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const loggingService = new LoggingService(env.LOGS_DB);
     await loggingService.initialize();
-    
+
     const recentLogs = await loggingService.getRecentLogs(100);
 
-    return new Response(JSON.stringify({
-      success: true,
-      logs: recentLogs,
-      count: recentLogs.length,
-      timestamp: new Date().toISOString()
-    }), {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+    return new Response(
+      JSON.stringify({
+        success: true,
+        logs: recentLogs,
+        count: recentLogs.length,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       }
-    });
-
+    );
   } catch (error) {
     console.error('Get logs error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to retrieve logs',
-      details: String(error)
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to retrieve logs',
+        details: String(error),
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
@@ -446,31 +522,43 @@ async function handleGetLogs(env: Env): Promise<Response> {
  */
 async function handleTestBot(request: Request, env: Env): Promise<Response> {
   try {
-    const body = await request.json() as { userId?: number; message?: string };
+    const body = (await request.json()) as {
+      userId?: number;
+      message?: string;
+    };
     const testUserId = body.userId || 99999;
     const testMessage = body.message || '/resume_and_job_post_match';
 
     const logs: string[] = [];
-    
+
     logs.push('🔧 Testing bot components...');
 
     // Test 1: Initialize services
     try {
       const services = await initializeServices(env);
       logs.push('✅ Services initialized successfully');
-      
+
       // Test 2: Check logging
-      await services.loggingService.log('INFO', 'BOT_TEST', 'Testing logging system');
+      await services.loggingService.log(
+        'INFO',
+        'BOT_TEST',
+        'Testing logging system'
+      );
       logs.push('✅ Logging service working');
 
       // Test 3: Test session creation
-      const session = services.sessionService.createSession(testUserId, testUserId);
+      const session = services.sessionService.createSession(
+        testUserId,
+        testUserId
+      );
       await services.sessionService.saveSession(session);
       logs.push('✅ Session service working');
 
       // Test 4: Test admin auth service
       const isAuthRequired = services.adminAuthService.isAuthRequired();
-      logs.push(`✅ Admin auth service working (auth required: ${isAuthRequired})`);
+      logs.push(
+        `✅ Admin auth service working (auth required: ${isAuthRequired})`
+      );
 
       // Test 5: Test webhook handling with a simple message
       const testUpdate = {
@@ -480,8 +568,8 @@ async function handleTestBot(request: Request, env: Env): Promise<Response> {
           from: { id: testUserId, first_name: 'Test', is_bot: false },
           chat: { id: testUserId, type: 'private' as const },
           date: Math.floor(Date.now() / 1000),
-          text: testMessage
-        }
+          text: testMessage,
+        },
       };
 
       logs.push('🔄 Processing test message...');
@@ -493,37 +581,41 @@ async function handleTestBot(request: Request, env: Env): Promise<Response> {
       const recentLogs = await services.loggingService.getRecentLogs(10);
       logs.push(`📝 Found ${recentLogs.length} recent log entries`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bot test completed successfully',
-        logs,
-        recentLogs: recentLogs.slice(0, 5),
-        testDetails: {
-          userId: testUserId,
-          message: testMessage,
-          timestamp: new Date().toISOString(),
-          environment: env.ENVIRONMENT || 'development'
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Bot test completed successfully',
+          logs,
+          recentLogs: recentLogs.slice(0, 5),
+          testDetails: {
+            userId: testUserId,
+            message: testMessage,
+            timestamp: new Date().toISOString(),
+            environment: env.ENVIRONMENT || 'development',
+          },
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
         }
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-
+      );
     } catch (serviceError) {
       logs.push(`❌ Service error: ${serviceError}`);
       throw serviceError;
     }
-
   } catch (error) {
     console.error('Test bot error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Bot test failed',
-      details: String(error),
-      logs: [`❌ Test failed: ${error}`]
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'Bot test failed',
+        details: String(error),
+        logs: [`❌ Test failed: ${error}`],
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
@@ -533,15 +625,15 @@ async function handleTestBot(request: Request, env: Env): Promise<Response> {
 async function handleValidateEnvironment(env: Env): Promise<Response> {
   try {
     console.log('🔍 Starting environment validation...');
-    
+
     // Initialize configuration service
     const configService = new EnvironmentConfigurationService(env);
     const config = configService.getConfig();
-    
+
     // Perform validation
     const validationResults = configService.validate();
     const maskedConfig = configService.getMaskedConfig();
-    
+
     // Test Telegram connectivity
     let telegramTest = null;
     try {
@@ -550,47 +642,55 @@ async function handleValidateEnvironment(env: Env): Promise<Response> {
       );
       telegramTest = {
         status: telegramResponse.ok ? 'pass' : 'fail',
-        message: telegramResponse.ok ? 'Bot token is valid' : 'Bot token validation failed',
-        details: telegramResponse.ok ? await telegramResponse.json() : await telegramResponse.text()
+        message: telegramResponse.ok
+          ? 'Bot token is valid'
+          : 'Bot token validation failed',
+        details: telegramResponse.ok
+          ? await telegramResponse.json()
+          : await telegramResponse.text(),
       };
     } catch (error) {
       telegramTest = {
         status: 'fail',
         message: 'Telegram API connection failed',
-        details: String(error)
+        details: String(error),
       };
     }
-    
+
     // Test OpenAI connectivity (if key present)
     let openaiTest = null;
     if (config.services.openaiApiKey) {
       try {
         const openaiResponse = await fetch('https://api.openai.com/v1/models', {
           headers: {
-            'Authorization': `Bearer ${config.services.openaiApiKey}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${config.services.openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
         });
         openaiTest = {
           status: openaiResponse.ok ? 'pass' : 'fail',
-          message: openaiResponse.ok ? 'OpenAI API key is valid' : 'OpenAI API key validation failed',
-          details: openaiResponse.ok ? 'Connection successful' : await openaiResponse.text()
+          message: openaiResponse.ok
+            ? 'OpenAI API key is valid'
+            : 'OpenAI API key validation failed',
+          details: openaiResponse.ok
+            ? 'Connection successful'
+            : await openaiResponse.text(),
         };
       } catch (error) {
         openaiTest = {
           status: 'fail',
           message: 'OpenAI API connection failed',
-          details: String(error)
+          details: String(error),
         };
       }
     } else {
       openaiTest = {
         status: 'warning',
         message: 'OpenAI API key not provided',
-        details: 'Set OPENAI_API_KEY to enable AI features'
+        details: 'Set OPENAI_API_KEY to enable AI features',
       };
     }
-    
+
     // Test webhook URL accessibility
     let webhookTest = null;
     try {
@@ -598,23 +698,24 @@ async function handleValidateEnvironment(env: Env): Promise<Response> {
       webhookTest = {
         status: 'pass',
         message: 'Webhook URL is accessible',
-        details: `Status: ${webhookResponse.status}`
+        details: `Status: ${webhookResponse.status}`,
       };
     } catch (error) {
       webhookTest = {
         status: 'warning',
         message: 'Webhook URL accessibility test failed',
-        details: String(error)
+        details: String(error),
       };
     }
-    
+
     // Calculate overall status
-    const hasErrors = validationResults.some(r => r.status === 'error') || 
-                     telegramTest?.status === 'fail' || 
-                     openaiTest?.status === 'fail';
-    
+    const hasErrors =
+      validationResults.some((r) => r.status === 'error') ||
+      telegramTest?.status === 'fail' ||
+      openaiTest?.status === 'fail';
+
     const overallStatus = hasErrors ? 'fail' : 'pass';
-    
+
     const report = {
       timestamp: new Date().toISOString(),
       environment: config.environment,
@@ -624,35 +725,50 @@ async function handleValidateEnvironment(env: Env): Promise<Response> {
         configValidation: validationResults,
         telegramConnectivity: telegramTest,
         openaiConnectivity: openaiTest,
-        webhookAccessibility: webhookTest
+        webhookAccessibility: webhookTest,
       },
       recommendations: [
-        ...(telegramTest?.status === 'fail' ? ['Fix Telegram bot token configuration'] : []),
-        ...(openaiTest?.status === 'fail' ? ['Fix OpenAI API key configuration'] : []),
-        ...(validationResults.filter(r => r.status === 'error').map(r => r.suggestion || r.message)),
-        ...(config.environment === 'production' && !config.telegram.webhookSecret ? ['Set webhook secret for production'] : [])
-      ]
+        ...(telegramTest?.status === 'fail'
+          ? ['Fix Telegram bot token configuration']
+          : []),
+        ...(openaiTest?.status === 'fail'
+          ? ['Fix OpenAI API key configuration']
+          : []),
+        ...validationResults
+          .filter((r) => r.status === 'error')
+          .map((r) => r.suggestion || r.message),
+        ...(config.environment === 'production' &&
+        !config.telegram.webhookSecret
+          ? ['Set webhook secret for production']
+          : []),
+      ],
     };
-    
+
     console.log('✅ Environment validation completed:', overallStatus);
-    
+
     return new Response(JSON.stringify(report, null, 2), {
       status: hasErrors ? 500 : 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
-    
   } catch (error) {
     console.error('❌ Environment validation failed:', error);
-    
-    return new Response(JSON.stringify({
-      timestamp: new Date().toISOString(),
-      overallStatus: 'fail',
-      error: 'Validation process failed',
-      message: String(error)
-    }, null, 2), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+
+    return new Response(
+      JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          overallStatus: 'fail',
+          error: 'Validation process failed',
+          message: String(error),
+        },
+        null,
+        2
+      ),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
@@ -662,68 +778,80 @@ async function handleValidateEnvironment(env: Env): Promise<Response> {
 async function handleServiceStatus(env: Env): Promise<Response> {
   try {
     console.log('📊 Getting service container status...');
-    
+
     // Initialize service container
     const services = await initializeServices(env);
     const container = services.container;
-    
+
     // Get service information
     const serviceInfo = container.getServiceInfo();
-    
+
     // Get health check results for initialized services
     const healthResults = await container.healthCheck();
-    
+
     // Combine service info with health results
-    const servicesStatus = serviceInfo.map(info => {
-      const health = healthResults.find(h => h.name === info.name);
+    const servicesStatus = serviceInfo.map((info) => {
+      const health = healthResults.find((h) => h.name === info.name);
       return {
         ...info,
-        healthStatus: health
+        healthStatus: health,
       };
     });
-    
+
     // Calculate overall status
-    const unhealthyServices = healthResults.filter(h => h.status === 'unhealthy');
-    const overallStatus = unhealthyServices.length === 0 ? 'healthy' : 'unhealthy';
-    
+    const unhealthyServices = healthResults.filter(
+      (h) => h.status === 'unhealthy'
+    );
+    const overallStatus =
+      unhealthyServices.length === 0 ? 'healthy' : 'unhealthy';
+
     const report = {
       timestamp: new Date().toISOString(),
       overallStatus,
       summary: {
         totalServices: serviceInfo.length,
-        initializedServices: serviceInfo.filter(s => s.initialized).length,
-        healthyServices: healthResults.filter(h => h.status === 'healthy').length,
+        initializedServices: serviceInfo.filter((s) => s.initialized).length,
+        healthyServices: healthResults.filter((h) => h.status === 'healthy')
+          .length,
         unhealthyServices: unhealthyServices.length,
       },
       services: servicesStatus,
       containerInfo: {
         registeredServices: container.getServiceNames(),
-        dependencyGraph: serviceInfo.reduce((graph, service) => {
-          graph[service.name] = service.dependencies;
-          return graph;
-        }, {} as Record<string, string[]>)
-      }
+        dependencyGraph: serviceInfo.reduce(
+          (graph, service) => {
+            graph[service.name] = service.dependencies;
+            return graph;
+          },
+          {} as Record<string, string[]>
+        ),
+      },
     };
-    
+
     console.log(`✅ Service container status: ${overallStatus}`);
-    
+
     return new Response(JSON.stringify(report, null, 2), {
       status: overallStatus === 'healthy' ? 200 : 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
-    
   } catch (error) {
     console.error('❌ Service status check failed:', error);
-    
-    return new Response(JSON.stringify({
-      timestamp: new Date().toISOString(),
-      overallStatus: 'error',
-      error: 'Service status check failed',
-      message: String(error)
-    }, null, 2), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+
+    return new Response(
+      JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          overallStatus: 'error',
+          error: 'Service status check failed',
+          message: String(error),
+        },
+        null,
+        2
+      ),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
-

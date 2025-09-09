@@ -3,13 +3,13 @@
  * Uses GPT-3.5 for cost-effective analysis with comprehensive breakdown
  */
 
-import { 
-  ProcessedDocument, 
-  EnhancedAnalysis, 
-  HeadlineAnalysis, 
-  SkillsAnalysis, 
-  ExperienceAnalysis, 
-  JobConditionsAnalysis 
+import {
+  ProcessedDocument,
+  EnhancedAnalysis,
+  HeadlineAnalysis,
+  SkillsAnalysis,
+  ExperienceAnalysis,
+  JobConditionsAnalysis,
 } from '../types/session';
 
 export class EnhancedAIService {
@@ -34,34 +34,51 @@ export class EnhancedAIService {
   /**
    * Perform comprehensive resume-job post analysis
    */
-  async analyzeResumeJobMatch(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<EnhancedAnalysis | null> {
+  async analyzeResumeJobMatch(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<EnhancedAnalysis | null> {
     try {
       console.log('Starting enhanced resume-job analysis...');
-      
+
       // Run all analyses in parallel for efficiency
-      const [headlinesResult, skillsResult, experienceResult, conditionsResult] = await Promise.all([
+      const [
+        headlinesResult,
+        skillsResult,
+        experienceResult,
+        conditionsResult,
+      ] = await Promise.all([
         this.analyzeHeadlines(resume, jobPost),
         this.analyzeSkills(resume, jobPost),
         this.analyzeExperience(resume, jobPost),
         this.analyzeJobConditions(resume, jobPost),
       ]);
 
-      if (!headlinesResult || !skillsResult || !experienceResult || !conditionsResult) {
+      if (
+        !headlinesResult ||
+        !skillsResult ||
+        !experienceResult ||
+        !conditionsResult
+      ) {
         console.error('One or more analyses failed');
         return null;
       }
 
       // Calculate overall score
       const overallScore = Math.round(
-        (headlinesResult.matchScore + skillsResult.matchScore + experienceResult.experienceMatch + conditionsResult.overallScore) / 4
+        (headlinesResult.matchScore +
+          skillsResult.matchScore +
+          experienceResult.experienceMatch +
+          conditionsResult.overallScore) /
+          4
       );
 
       // Generate comprehensive summary
       const summary = this.generateComprehensiveSummary(
-        overallScore, 
-        headlinesResult, 
-        skillsResult, 
-        experienceResult, 
+        overallScore,
+        headlinesResult,
+        skillsResult,
+        experienceResult,
         conditionsResult
       );
 
@@ -77,7 +94,6 @@ export class EnhancedAIService {
 
       console.log('Enhanced analysis completed successfully');
       return analysis;
-
     } catch (error) {
       console.error('Error in enhanced AI analysis:', error);
       return null;
@@ -87,7 +103,10 @@ export class EnhancedAIService {
   /**
    * Analyze job title vs candidate experience titles
    */
-  private async analyzeHeadlines(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<HeadlineAnalysis | null> {
+  private async analyzeHeadlines(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<HeadlineAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
     const prompt = `
@@ -130,7 +149,10 @@ ${jobText}
   /**
    * Analyze skills match with detailed breakdown
    */
-  private async analyzeSkills(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<SkillsAnalysis | null> {
+  private async analyzeSkills(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<SkillsAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
     const prompt = `
@@ -178,7 +200,10 @@ ${jobText}
   /**
    * Analyze experience with seniority and quantity assessment
    */
-  private async analyzeExperience(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<ExperienceAnalysis | null> {
+  private async analyzeExperience(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<ExperienceAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
     const prompt = `
@@ -228,7 +253,10 @@ ${jobText}
   /**
    * Analyze job conditions compatibility
    */
-  private async analyzeJobConditions(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<JobConditionsAnalysis | null> {
+  private async analyzeJobConditions(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<JobConditionsAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
     const prompt = `
@@ -293,39 +321,49 @@ ${jobText}
   private async callGPT(prompt: string, category: string): Promise<any | null> {
     try {
       console.log(`Making GPT API call for ${category} analysis...`);
-      
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'Ты эксперт по HR и анализу резюме. Отвечай ТОЛЬКО валидным JSON без лишнего текста. Будь подробным и конкретным.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          // Prefer JSON mode when supported by the model
-          ...(this.supportsJsonMode() ? { response_format: { type: 'json_object' } } : {}),
-          max_tokens: this.maxTokens,
-          temperature: this.temperature,
-        }),
-      });
+
+      const response = await fetch(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'Ты эксперт по HR и анализу резюме. Отвечай ТОЛЬКО валидным JSON без лишнего текста. Будь подробным и конкретным.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            // Prefer JSON mode when supported by the model
+            ...(this.supportsJsonMode()
+              ? { response_format: { type: 'json_object' } }
+              : {}),
+            max_tokens: this.maxTokens,
+            temperature: this.temperature,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`OpenAI API error for ${category}:`, response.status, errorText);
+        console.error(
+          `OpenAI API error for ${category}:`,
+          response.status,
+          errorText
+        );
         return null;
       }
 
-      const data = await response.json() as any;
+      const data = (await response.json()) as any;
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {
@@ -340,7 +378,6 @@ ${jobText}
         return parsed;
       }
       return null;
-
     } catch (error) {
       console.error(`Error in ${category} analysis:`, error);
       return null;
@@ -354,7 +391,9 @@ ${jobText}
     // Fast path
     try {
       return JSON.parse(content);
-    } catch {}
+    } catch {
+      // Will try alternative parsing methods below
+    }
 
     // Strip code fences if present
     const fencedMatch = content.match(/```(?:json)?\n([\s\S]*?)\n```/i);
@@ -362,7 +401,9 @@ ${jobText}
       try {
         return JSON.parse(fencedMatch[1]);
       } catch (err) {
-        console.error(`JSON parse failed for ${category} after removing code fences:`);
+        console.error(
+          `JSON parse failed for ${category} after removing code fences:`
+        );
       }
     }
 
@@ -374,11 +415,16 @@ ${jobText}
       try {
         return JSON.parse(jsonSlice);
       } catch (err) {
-        console.error(`JSON slice parse failed for ${category}. Slice length: ${jsonSlice.length}`);
+        console.error(
+          `JSON slice parse failed for ${category}. Slice length: ${jsonSlice.length}`
+        );
       }
     }
 
-    console.error(`Failed to parse JSON for ${category}. Content preview:`, content.slice(0, 500));
+    console.error(
+      `Failed to parse JSON for ${category}. Content preview:`,
+      content.slice(0, 500)
+    );
     return null;
   }
 
@@ -387,7 +433,12 @@ ${jobText}
    */
   private supportsJsonMode(): boolean {
     const m = (this.model || '').toLowerCase();
-    return m.includes('gpt-4o') || m.includes('4.1') || m.includes('o3') || m.includes('mini');
+    return (
+      m.includes('gpt-4o') ||
+      m.includes('4.1') ||
+      m.includes('o3') ||
+      m.includes('mini')
+    );
   }
 
   /**
@@ -414,11 +465,13 @@ ${jobText}
 
     // Overall assessment
     if (overallScore >= 85) {
-      summary = '🎉 ОТЛИЧНОЕ СОВПАДЕНИЕ! Кандидат очень хорошо подходит на эту позицию.';
+      summary =
+        '🎉 ОТЛИЧНОЕ СОВПАДЕНИЕ! Кандидат очень хорошо подходит на эту позицию.';
     } else if (overallScore >= 70) {
       summary = '👍 СИЛЬНОЕ СОВПАДЕНИЕ! Кандидат хорошо соответствует роли.';
     } else if (overallScore >= 55) {
-      summary = '⚠️ СРЕДНЕЕ СОВПАДЕНИЕ. Есть зоны для улучшения, но потенциал есть.';
+      summary =
+        '⚠️ СРЕДНЕЕ СОВПАДЕНИЕ. Есть зоны для улучшения, но потенциал есть.';
     } else if (overallScore >= 40) {
       summary = '❌ СЛАБОЕ СОВПАДЕНИЕ. Требуются существенные корректировки.';
     } else {
@@ -436,12 +489,12 @@ ${jobText}
     const allProblems = [
       ...headlines.problems,
       ...skills.problems,
-      ...experience.problems
+      ...experience.problems,
     ];
-    
+
     if (allProblems.length > 0) {
       summary += `\n\n🚨 **КЛЮЧЕВЫЕ ПРОБЛЕМЫ:**`;
-      allProblems.slice(0, 3).forEach(problem => {
+      allProblems.slice(0, 3).forEach((problem) => {
         summary += `\n• ${problem}`;
       });
     }
@@ -450,12 +503,12 @@ ${jobText}
     const allRecommendations = [
       ...headlines.recommendations,
       ...skills.recommendations,
-      ...experience.recommendations
+      ...experience.recommendations,
     ];
-    
+
     if (allRecommendations.length > 0) {
       summary += `\n\n💡 **РЕКОМЕНДАЦИИ:**`;
-      allRecommendations.slice(0, 3).forEach(rec => {
+      allRecommendations.slice(0, 3).forEach((rec) => {
         summary += `\n• ${rec}`;
       });
     }

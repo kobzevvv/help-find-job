@@ -52,31 +52,49 @@ export class ConversationHandler {
       chatId,
       text: message.text,
       hasFrom: !!message.from,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (!userId) {
       console.error('❌ Missing user ID in message');
-      await this.loggingService.logError('INVALID_MESSAGE', 'No user ID in message', new Error('Missing user ID'), undefined, chatId);
+      await this.loggingService.logError(
+        'INVALID_MESSAGE',
+        'No user ID in message',
+        new Error('Missing user ID'),
+        undefined,
+        chatId
+      );
       return;
     }
 
-    const messageText = message.text || message.document?.file_name || 'non-text message';
+    const messageText =
+      message.text || message.document?.file_name || 'non-text message';
     await this.loggingService.logUserMessage(userId, chatId, messageText, {
       messageId: message.message_id,
-      messageType: message.text ? 'text' : message.document ? 'document' : 'other',
-      documentInfo: message.document ? {
-        fileName: message.document.file_name,
-        mimeType: message.document.mime_type,
-        fileSize: message.document.file_size
-      } : undefined
+      messageType: message.text
+        ? 'text'
+        : message.document
+          ? 'document'
+          : 'other',
+      documentInfo: message.document
+        ? {
+            fileName: message.document.file_name,
+            mimeType: message.document.mime_type,
+            fileSize: message.document.file_size,
+          }
+        : undefined,
     });
 
     try {
       // Get or create session
       let session = await this.sessionService.getSession(userId);
       if (!session) {
-        await this.loggingService.log('INFO', 'NEW_SESSION', 'Creating new session for user', { userId, chatId });
+        await this.loggingService.log(
+          'INFO',
+          'NEW_SESSION',
+          'Creating new session for user',
+          { userId, chatId }
+        );
         session = this.sessionService.createSession(
           userId,
           chatId,
@@ -84,12 +102,18 @@ export class ConversationHandler {
         );
         await this.sessionService.saveSession(session);
       } else {
-        await this.loggingService.log('DEBUG', 'SESSION_FOUND', `Found existing session in state: ${session.state}`, { 
-          userId, 
-          chatId, 
-          currentState: session.state,
-          sessionAge: new Date().getTime() - new Date(session.createdAt).getTime()
-        });
+        await this.loggingService.log(
+          'DEBUG',
+          'SESSION_FOUND',
+          `Found existing session in state: ${session.state}`,
+          {
+            userId,
+            chatId,
+            currentState: session.state,
+            sessionAge:
+              new Date().getTime() - new Date(session.createdAt).getTime(),
+          }
+        );
       }
 
       // Handle different message types based on session state
@@ -98,13 +122,25 @@ export class ConversationHandler {
       } else if (message.document) {
         await this.handleDocumentMessage(message, session.state);
       } else {
-        await this.loggingService.log('WARN', 'UNSUPPORTED_MESSAGE', 'Received unsupported message type', { messageType: typeof message }, userId, chatId);
+        await this.loggingService.log(
+          'WARN',
+          'UNSUPPORTED_MESSAGE',
+          'Received unsupported message type',
+          { messageType: typeof message },
+          userId,
+          chatId
+        );
         await this.sendHelpMessage(chatId);
       }
-
     } catch (error) {
       console.error('💥 MESSAGE HANDLER ERROR:', error);
-      await this.loggingService.logError('MESSAGE_HANDLER_ERROR', 'Error in message handler', error as Error, userId, chatId);
+      await this.loggingService.logError(
+        'MESSAGE_HANDLER_ERROR',
+        'Error in message handler',
+        error as Error,
+        userId,
+        chatId
+      );
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: '❌ Что-то пошло не так. Пожалуйста, попробуйте ещё раз.',
@@ -115,7 +151,10 @@ export class ConversationHandler {
   /**
    * Handle text messages
    */
-  private async handleTextMessage(message: TelegramMessage, currentState: string): Promise<void> {
+  private async handleTextMessage(
+    message: TelegramMessage,
+    currentState: string
+  ): Promise<void> {
     const chatId = message.chat.id;
     const userId = message.from!.id;
     const text = message.text!;
@@ -169,12 +208,18 @@ export class ConversationHandler {
   /**
    * Handle document uploads
    */
-  private async handleDocumentMessage(message: TelegramMessage, currentState: string): Promise<void> {
+  private async handleDocumentMessage(
+    message: TelegramMessage,
+    currentState: string
+  ): Promise<void> {
     const chatId = message.chat.id;
     const userId = message.from!.id;
     const document = message.document!;
 
-    if (currentState !== 'waiting_resume' && currentState !== 'waiting_job_post') {
+    if (
+      currentState !== 'waiting_resume' &&
+      currentState !== 'waiting_job_post'
+    ) {
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: '❌ Сейчас я не жду документ. Пожалуйста, начните с команды /resume_and_job_post_match',
@@ -189,7 +234,9 @@ export class ConversationHandler {
         throw new Error('Не удалось получить информацию о файле');
       }
 
-      const fileContent = await this.telegramService.downloadFile(fileInfo.file_path);
+      const fileContent = await this.telegramService.downloadFile(
+        fileInfo.file_path
+      );
       if (!fileContent) {
         throw new Error('Не удалось скачать файл');
       }
@@ -204,7 +251,8 @@ export class ConversationHandler {
         throw new Error('Не удалось обработать документ');
       }
 
-      const validation = this.documentService.validateDocument(processedDocument);
+      const validation =
+        this.documentService.validateDocument(processedDocument);
       if (!validation.isValid) {
         await this.telegramService.sendMessage({
           chat_id: chatId,
@@ -220,18 +268,19 @@ export class ConversationHandler {
           chat_id: chatId,
           text: '✅ Resume file received. You can upload more files or paste more resume text. When finished, confirm below:',
           reply_markup: {
-            inline_keyboard: [[
-              { text: '✅ Done with resume', callback_data: 'resume_done' },
-              { text: '❌ Cancel', callback_data: 'cancel' }
-            ]]
-          }
+            inline_keyboard: [
+              [
+                { text: '✅ Done with resume', callback_data: 'resume_done' },
+                { text: '❌ Cancel', callback_data: 'cancel' },
+              ],
+            ],
+          },
         });
       } else if (currentState === 'waiting_job_post') {
         // In the explicit-confirmation flow, any content here is treated as job post
         await this.sessionService.addJobPost(userId, processedDocument);
         await this.startAnalysis(chatId, userId);
       }
-
     } catch (error) {
       console.error('Error processing document:', error);
       await this.telegramService.sendMessage({
@@ -244,7 +293,11 @@ export class ConversationHandler {
   /**
    * Handle bot commands
    */
-  private async handleCommand(fullText: string, chatId: number, userId: number): Promise<void> {
+  private async handleCommand(
+    fullText: string,
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     const parts = fullText.trim().split(/\s+/);
     const command = parts.length > 0 && parts[0] ? parts[0].toLowerCase() : '';
     switch (command) {
@@ -297,16 +350,24 @@ export class ConversationHandler {
   private isMatchRequest(text: string): boolean {
     const lowerText = text.toLowerCase();
     const keywords = [
-      'help match', 'match resume', 'compare resume', 'analyze resume',
-      'job match', 'resume job', 'check resume'
+      'help match',
+      'match resume',
+      'compare resume',
+      'analyze resume',
+      'job match',
+      'resume job',
+      'check resume',
     ];
-    return keywords.some(keyword => lowerText.includes(keyword));
+    return keywords.some((keyword) => lowerText.includes(keyword));
   }
 
   /**
    * Start the matching process
    */
-  private async startMatchingProcess(chatId: number, userId: number): Promise<void> {
+  private async startMatchingProcess(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     await this.sessionService.updateState(userId, 'waiting_resume');
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -317,10 +378,15 @@ export class ConversationHandler {
   /**
    * Handle resume text input
    */
-  private async handleResumeText(text: string, chatId: number, userId: number): Promise<void> {
+  private async handleResumeText(
+    text: string,
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     try {
       const processedDocument = this.documentService.processTextInput(text);
-      const validation = this.documentService.validateDocument(processedDocument);
+      const validation =
+        this.documentService.validateDocument(processedDocument);
 
       if (!validation.isValid) {
         await this.telegramService.sendMessage({
@@ -335,7 +401,8 @@ export class ConversationHandler {
       if (session?.resume && session.state === 'waiting_resume') {
         const mergedText = `${session.resume.text}\n\n${processedDocument.text}`;
         const mergedResume = this.documentService.processTextInput(mergedText);
-        const mergedValidation = this.documentService.validateDocument(mergedResume);
+        const mergedValidation =
+          this.documentService.validateDocument(mergedResume);
         if (!mergedValidation.isValid) {
           await this.telegramService.sendMessage({
             chat_id: chatId,
@@ -348,11 +415,13 @@ export class ConversationHandler {
           chat_id: chatId,
           text: '🧩 Добавлено дополнительное содержимое резюме. Когда закончите, подтвердите ниже:',
           reply_markup: {
-            inline_keyboard: [[
-              { text: '✅ Готово с резюме', callback_data: 'resume_done' },
-              { text: '❌ Отмена', callback_data: 'cancel' }
-            ]]
-          }
+            inline_keyboard: [
+              [
+                { text: '✅ Готово с резюме', callback_data: 'resume_done' },
+                { text: '❌ Отмена', callback_data: 'cancel' },
+              ],
+            ],
+          },
         });
         return;
       }
@@ -362,13 +431,14 @@ export class ConversationHandler {
         chat_id: chatId,
         text: '✅ Резюме получено. Вы можете отправить дополнительные части при необходимости. Когда закончите, подтвердите ниже:',
         reply_markup: {
-          inline_keyboard: [[
-            { text: '✅ Готово с резюме', callback_data: 'resume_done' },
-            { text: '❌ Отмена', callback_data: 'cancel' }
-          ]]
-        }
+          inline_keyboard: [
+            [
+              { text: '✅ Готово с резюме', callback_data: 'resume_done' },
+              { text: '❌ Отмена', callback_data: 'cancel' },
+            ],
+          ],
+        },
       });
-
     } catch (error) {
       console.error('Error processing resume text:', error);
       await this.telegramService.sendMessage({
@@ -381,10 +451,15 @@ export class ConversationHandler {
   /**
    * Handle job post text input
    */
-  private async handleJobPostText(text: string, chatId: number, userId: number): Promise<void> {
+  private async handleJobPostText(
+    text: string,
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     try {
       const processedDocument = this.documentService.processTextInput(text);
-      const validation = this.documentService.validateDocument(processedDocument);
+      const validation =
+        this.documentService.validateDocument(processedDocument);
 
       if (!validation.isValid) {
         await this.telegramService.sendMessage({
@@ -397,12 +472,11 @@ export class ConversationHandler {
       // In explicit-confirmation mode, anything here is treated as job post
       await this.sessionService.addJobPost(userId, processedDocument);
       await this.startAnalysis(chatId, userId);
-
     } catch (error) {
       console.error('Error processing job post text:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Sorry, I couldn\'t process that text. Please try again.',
+        text: "❌ Sorry, I couldn't process that text. Please try again.",
       });
     }
   }
@@ -413,7 +487,8 @@ export class ConversationHandler {
   private async startAnalysis(chatId: number, userId: number): Promise<void> {
     try {
       // Fetch session with retries to handle KV eventual consistency after recent writes
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      const delay = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
       let session = await this.sessionService.getSession(userId);
       let attempt = 0;
       const maxAttempts = 5; // ~3 seconds total with exponential backoff
@@ -431,7 +506,10 @@ export class ConversationHandler {
           text: `❌ Не хватает данных: ${missing}. Пожалуйста, отправьте ${missing}, чтобы начать анализ.`,
         });
         // Put the session back into the appropriate waiting state
-        await this.sessionService.updateState(userId, !session?.resume ? 'waiting_resume' : 'waiting_job_post');
+        await this.sessionService.updateState(
+          userId,
+          !session?.resume ? 'waiting_resume' : 'waiting_job_post'
+        );
         return;
       }
 
@@ -442,20 +520,25 @@ export class ConversationHandler {
       });
 
       console.log('Starting enhanced analysis for user:', userId);
-      const enhancedAnalysis = await this.enhancedAIService.analyzeResumeJobMatch(session.resume, session.jobPost);
-      
+      const enhancedAnalysis =
+        await this.enhancedAIService.analyzeResumeJobMatch(
+          session.resume,
+          session.jobPost
+        );
+
       if (!enhancedAnalysis) {
         throw new Error('Enhanced analysis failed');
       }
 
       await this.sendEnhancedAnalysisResults(chatId, enhancedAnalysis);
       await this.sessionService.completeSession(userId);
-
     } catch (error) {
       console.error('Error during enhanced analysis:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Анализ не удался. Пожалуйста, попробуйте позже.\n\nДетали ошибки: ' + (error as Error).message,
+        text:
+          '❌ Анализ не удался. Пожалуйста, попробуйте позже.\n\nДетали ошибки: ' +
+          (error as Error).message,
       });
       await this.sessionService.completeSession(userId);
     }
@@ -464,7 +547,10 @@ export class ConversationHandler {
   /**
    * Send enhanced analysis results
    */
-  private async sendEnhancedAnalysisResults(chatId: number, analysis: EnhancedAnalysis): Promise<void> {
+  private async sendEnhancedAnalysisResults(
+    chatId: number,
+    analysis: EnhancedAnalysis
+  ): Promise<void> {
     // Send summary first
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -488,7 +574,10 @@ export class ConversationHandler {
   /**
    * Send headline analysis details
    */
-  private async sendHeadlineAnalysis(chatId: number, headlines: any): Promise<void> {
+  private async sendHeadlineAnalysis(
+    chatId: number,
+    headlines: any
+  ): Promise<void> {
     const message = `🏷️ **АНАЛИЗ ЗАГОЛОВКОВ** (${headlines.matchScore}/100)
 
 **Название вакансии:** ${headlines.jobTitle}
@@ -535,11 +624,22 @@ ${skills.recommendations.length > 0 ? `💡 **Рекомендации:**\n${ski
   /**
    * Send experience analysis details
    */
-  private async sendExperienceAnalysis(chatId: number, experience: any): Promise<void> {
-    const seniorityEmoji = experience.seniorityMatch === 'perfect-match' ? '✅' : 
-                          experience.seniorityMatch === 'over-qualified' ? '⬆️' : '⬇️';
-    const seniorityText = experience.seniorityMatch === 'perfect-match' ? 'идеальное соответствие' :
-                          experience.seniorityMatch === 'over-qualified' ? 'переквалифицирован' : 'недостаточный уровень';
+  private async sendExperienceAnalysis(
+    chatId: number,
+    experience: any
+  ): Promise<void> {
+    const seniorityEmoji =
+      experience.seniorityMatch === 'perfect-match'
+        ? '✅'
+        : experience.seniorityMatch === 'over-qualified'
+          ? '⬆️'
+          : '⬇️';
+    const seniorityText =
+      experience.seniorityMatch === 'perfect-match'
+        ? 'идеальное соответствие'
+        : experience.seniorityMatch === 'over-qualified'
+          ? 'переквалифицирован'
+          : 'недостаточный уровень';
 
     const message = `💼 **АНАЛИЗ ОПЫТА** (${experience.experienceMatch}/100)
 
@@ -568,7 +668,10 @@ ${experience.recommendations.length > 0 ? `💡 **Рекомендации:**\n$
   /**
    * Send job conditions analysis details
    */
-  private async sendJobConditionsAnalysis(chatId: number, conditions: any): Promise<void> {
+  private async sendJobConditionsAnalysis(
+    chatId: number,
+    conditions: any
+  ): Promise<void> {
     const locationEmoji = conditions.location.compatible ? '✅' : '❌';
     const salaryEmoji = conditions.salary.compatible ? '✅' : '❌';
     const scheduleEmoji = conditions.schedule.compatible ? '✅' : '❌';
@@ -597,11 +700,13 @@ ${conditions.workFormat.explanation}
     });
   }
 
-
   /**
    * Handle test resume match command - uses test files for analysis
    */
-  private async handleTestResumeMatch(chatId: number, _userId: number): Promise<void> {
+  private async handleTestResumeMatch(
+    chatId: number,
+    _userId: number
+  ): Promise<void> {
     try {
       await this.telegramService.sendMessage({
         chat_id: chatId,
@@ -609,12 +714,20 @@ ${conditions.workFormat.explanation}
       });
 
       // Load test files (these should be the test files you provided)
-      const testResume = this.documentService.processTextInput(this.getTestResumeText());
-      const testJobPost = this.documentService.processTextInput(this.getTestJobPostText());
+      const testResume = this.documentService.processTextInput(
+        this.getTestResumeText()
+      );
+      const testJobPost = this.documentService.processTextInput(
+        this.getTestJobPostText()
+      );
 
       console.log('Running test analysis with enhanced AI service...');
-      const enhancedAnalysis = await this.enhancedAIService.analyzeResumeJobMatch(testResume, testJobPost);
-      
+      const enhancedAnalysis =
+        await this.enhancedAIService.analyzeResumeJobMatch(
+          testResume,
+          testJobPost
+        );
+
       if (!enhancedAnalysis) {
         throw new Error('Test analysis failed');
       }
@@ -625,12 +738,12 @@ ${conditions.workFormat.explanation}
       });
 
       await this.sendEnhancedAnalysisResults(chatId, enhancedAnalysis);
-
     } catch (error) {
       console.error('Error during test analysis:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Тестовый анализ завершился ошибкой: ' + (error as Error).message,
+        text:
+          '❌ Тестовый анализ завершился ошибкой: ' + (error as Error).message,
       });
     }
   }
@@ -725,9 +838,19 @@ SPIN-продажи
       text: '👋 Добро пожаловать в бота сопоставления резюме и вакансии!\n\nЯ помогу проанализировать соответствие вашего резюме описанию вакансии с помощью ИИ.\n\n🚀 Чтобы начать, отправьте:\n/resume_and_job_post_match\n\n❓ Нужна помощь? Отправьте /help',
     });
     if (sent) {
-      await this.loggingService.logBotResponse(0, chatId, 'Welcome message sent');
+      await this.loggingService.logBotResponse(
+        0,
+        chatId,
+        'Welcome message sent'
+      );
     } else {
-      await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send welcome message', new Error('sendMessage returned false'), 0, chatId);
+      await this.loggingService.logError(
+        'SEND_MESSAGE_FAILED',
+        'Failed to send welcome message',
+        new Error('sendMessage returned false'),
+        0,
+        chatId
+      );
     }
   }
 
@@ -742,14 +865,23 @@ SPIN-продажи
     if (sent) {
       await this.loggingService.logBotResponse(0, chatId, 'Help message sent');
     } else {
-      await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send help message', new Error('sendMessage returned false'), 0, chatId);
+      await this.loggingService.logError(
+        'SEND_MESSAGE_FAILED',
+        'Failed to send help message',
+        new Error('sendMessage returned false'),
+        0,
+        chatId
+      );
     }
   }
 
   /**
    * Cancel current process
    */
-  private async cancelCurrentProcess(chatId: number, userId: number): Promise<void> {
+  private async cancelCurrentProcess(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     await this.sessionService.completeSession(userId);
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -762,11 +894,12 @@ SPIN-продажи
    */
   private getAdminHelpMessage(command: string): string {
     let environmentInfo = '';
-    
+
     if (this.environment === 'staging') {
       environmentInfo = `\n\n🔧 **Staging Environment**\nPassword: \`${this.adminPassword}\``;
     } else {
-      environmentInfo = '\n\n🔒 **Secure Environment**\nAsk the developer for the password.';
+      environmentInfo =
+        '\n\n🔒 **Secure Environment**\nAsk the developer for the password.';
     }
 
     return `🔑 **Admin Command Help**\n\nUsage: \`${command} <password>\`${environmentInfo}\n\n📋 **Available Commands:**\n• \`/get_last_10_messages <password>\`\n• \`/get_last_100_messages <password>\`\n• \`/log_summary <password>\``;
@@ -795,22 +928,39 @@ SPIN-продажи
   /**
    * Handle simplified log command with inline password
    */
-  private async handleSimpleLogCommand(fullText: string, chatId: number, userId: number, limit: number): Promise<void> {
+  private async handleSimpleLogCommand(
+    fullText: string,
+    chatId: number,
+    userId: number,
+    limit: number
+  ): Promise<void> {
     try {
       // Parse command: /get_last_10_messages password
       const parts = fullText.trim().split(/\s+/);
       const password = parts[1];
 
       if (!password) {
-        const helpMessage = this.getAdminHelpMessage(`/get_last_${limit}_messages`);
+        const helpMessage = this.getAdminHelpMessage(
+          `/get_last_${limit}_messages`
+        );
         const sent = await this.telegramService.sendMessage({
           chat_id: chatId,
           text: helpMessage,
         });
         if (sent) {
-          await this.loggingService.logBotResponse(userId, chatId, 'Admin help message');
+          await this.loggingService.logBotResponse(
+            userId,
+            chatId,
+            'Admin help message'
+          );
         } else {
-          await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send admin help message', new Error('sendMessage returned false'), userId, chatId);
+          await this.loggingService.logError(
+            'SEND_MESSAGE_FAILED',
+            'Failed to send admin help message',
+            new Error('sendMessage returned false'),
+            userId,
+            chatId
+          );
         }
         return;
       }
@@ -822,11 +972,28 @@ SPIN-продажи
           text: errorMessage,
         });
         if (sent) {
-          await this.loggingService.logBotResponse(userId, chatId, errorMessage);
+          await this.loggingService.logBotResponse(
+            userId,
+            chatId,
+            errorMessage
+          );
         } else {
-          await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send invalid password message', new Error('sendMessage returned false'), userId, chatId);
+          await this.loggingService.logError(
+            'SEND_MESSAGE_FAILED',
+            'Failed to send invalid password message',
+            new Error('sendMessage returned false'),
+            userId,
+            chatId
+          );
         }
-        await this.loggingService.log('WARN', 'LOG_ACCESS_DENIED', 'Invalid password for log access', { limit }, userId, chatId);
+        await this.loggingService.log(
+          'WARN',
+          'LOG_ACCESS_DENIED',
+          'Invalid password for log access',
+          { limit },
+          userId,
+          chatId
+        );
         return;
       }
 
@@ -836,14 +1003,27 @@ SPIN-продажи
         text: `📊 Fetching last ${limit} log messages...`,
       });
       if (loadingSent) {
-        await this.loggingService.logBotResponse(userId, chatId, `📊 Fetching last ${limit} log messages...`);
+        await this.loggingService.logBotResponse(
+          userId,
+          chatId,
+          `📊 Fetching last ${limit} log messages...`
+        );
       } else {
-        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send loading message', new Error('sendMessage returned false'), userId, chatId);
+        await this.loggingService.logError(
+          'SEND_MESSAGE_FAILED',
+          'Failed to send loading message',
+          new Error('sendMessage returned false'),
+          userId,
+          chatId
+        );
         return; // Don't continue if we can't send messages
       }
 
       // Get formatted logs
-      const formattedLogs = await this.loggingService.getFormattedRecentLogs(limit, this.environment);
+      const formattedLogs = await this.loggingService.getFormattedRecentLogs(
+        limit,
+        this.environment
+      );
 
       // Send logs
       const logsSent = await this.telegramService.sendMessage({
@@ -851,16 +1031,38 @@ SPIN-продажи
         text: formattedLogs,
       });
       if (logsSent) {
-        await this.loggingService.logBotResponse(userId, chatId, 'Log results sent');
+        await this.loggingService.logBotResponse(
+          userId,
+          chatId,
+          'Log results sent'
+        );
       } else {
-        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send log results', new Error('sendMessage returned false'), userId, chatId);
+        await this.loggingService.logError(
+          'SEND_MESSAGE_FAILED',
+          'Failed to send log results',
+          new Error('sendMessage returned false'),
+          userId,
+          chatId
+        );
       }
 
       // Log access
-      await this.loggingService.log('INFO', 'LOG_ACCESS_SUCCESS', `Viewed last ${limit} messages`, { limit }, userId, chatId);
-
+      await this.loggingService.log(
+        'INFO',
+        'LOG_ACCESS_SUCCESS',
+        `Viewed last ${limit} messages`,
+        { limit },
+        userId,
+        chatId
+      );
     } catch (error) {
-      await this.loggingService.logError('LOG_ACCESS_ERROR', 'Error viewing logs', error as Error, userId, chatId);
+      await this.loggingService.logError(
+        'LOG_ACCESS_ERROR',
+        'Error viewing logs',
+        error as Error,
+        userId,
+        chatId
+      );
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: '❌ Error retrieving logs. Please try again.',
@@ -871,7 +1073,11 @@ SPIN-продажи
   /**
    * Handle simplified log summary command with inline password
    */
-  private async handleSimpleLogSummaryCommand(fullText: string, chatId: number, userId: number): Promise<void> {
+  private async handleSimpleLogSummaryCommand(
+    fullText: string,
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     try {
       // Parse command: /log_summary password
       const parts = fullText.trim().split(/\s+/);
@@ -892,7 +1098,14 @@ SPIN-продажи
           chat_id: chatId,
           text: errorMessage,
         });
-        await this.loggingService.log('WARN', 'LOG_SUMMARY_ACCESS_DENIED', 'Invalid password for log summary access', {}, userId, chatId);
+        await this.loggingService.log(
+          'WARN',
+          'LOG_SUMMARY_ACCESS_DENIED',
+          'Invalid password for log summary access',
+          {},
+          userId,
+          chatId
+        );
         return;
       }
 
@@ -902,9 +1115,19 @@ SPIN-продажи
         text: '📊 Generating log summary...',
       });
       if (loadingSent) {
-        await this.loggingService.logBotResponse(userId, chatId, '📊 Generating log summary...');
+        await this.loggingService.logBotResponse(
+          userId,
+          chatId,
+          '📊 Generating log summary...'
+        );
       } else {
-        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send loading message', new Error('sendMessage returned false'), userId, chatId);
+        await this.loggingService.logError(
+          'SEND_MESSAGE_FAILED',
+          'Failed to send loading message',
+          new Error('sendMessage returned false'),
+          userId,
+          chatId
+        );
         return; // Don't continue if we can't send messages
       }
 
@@ -916,16 +1139,38 @@ SPIN-продажи
         text: summary,
       });
       if (summarySent) {
-        await this.loggingService.logBotResponse(userId, chatId, 'Log summary sent');
+        await this.loggingService.logBotResponse(
+          userId,
+          chatId,
+          'Log summary sent'
+        );
       } else {
-        await this.loggingService.logError('SEND_MESSAGE_FAILED', 'Failed to send log summary', new Error('sendMessage returned false'), userId, chatId);
+        await this.loggingService.logError(
+          'SEND_MESSAGE_FAILED',
+          'Failed to send log summary',
+          new Error('sendMessage returned false'),
+          userId,
+          chatId
+        );
       }
 
       // Log access
-      await this.loggingService.log('INFO', 'LOG_SUMMARY_SUCCESS', 'Viewed log summary', {}, userId, chatId);
-
+      await this.loggingService.log(
+        'INFO',
+        'LOG_SUMMARY_SUCCESS',
+        'Viewed log summary',
+        {},
+        userId,
+        chatId
+      );
     } catch (error) {
-      await this.loggingService.logError('LOG_SUMMARY_ERROR', 'Error generating log summary', error as Error, userId, chatId);
+      await this.loggingService.logError(
+        'LOG_SUMMARY_ERROR',
+        'Error generating log summary',
+        error as Error,
+        userId,
+        chatId
+      );
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: '❌ Error generating log summary. Please try again.',

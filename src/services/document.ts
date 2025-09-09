@@ -23,9 +23,11 @@ export class DocumentService {
       // Check file size
       const fileSizeBytes = content.byteLength;
       const fileSizeMB = fileSizeBytes / (1024 * 1024);
-      
+
       if (fileSizeMB > this.maxFileSizeMB) {
-        throw new Error(`Слишком большой файл: ${fileSizeMB.toFixed(2)}MB (максимум: ${this.maxFileSizeMB}MB)`);
+        throw new Error(
+          `Слишком большой файл: ${fileSizeMB.toFixed(2)}MB (максимум: ${this.maxFileSizeMB}MB)`
+        );
       }
 
       let extractedText: string;
@@ -36,7 +38,9 @@ export class DocumentService {
       } else if (mimeType === 'application/pdf' || fileName?.endsWith('.pdf')) {
         extractedText = await this.extractTextFromPDF(content);
       } else if (
-        mimeType?.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') ||
+        mimeType?.includes(
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ) ||
         fileName?.endsWith('.docx')
       ) {
         extractedText = await this.extractTextFromDOCX(content);
@@ -56,12 +60,11 @@ export class DocumentService {
         wordCount,
         processedAt: new Date().toISOString(),
       };
-      
+
       if (fileName) result.fileName = fileName;
       if (mimeType) result.mimeType = mimeType;
-      
-      return result;
 
+      return result;
     } catch (error) {
       console.error('Error processing document:', error);
       return null;
@@ -71,7 +74,9 @@ export class DocumentService {
   /**
    * Extract text from plain text file
    */
-  private async extractTextFromPlainText(content: ArrayBuffer): Promise<string> {
+  private async extractTextFromPlainText(
+    content: ArrayBuffer
+  ): Promise<string> {
     const decoder = new TextDecoder('utf-8');
     return decoder.decode(content);
   }
@@ -83,7 +88,9 @@ export class DocumentService {
   private async extractTextFromPDF(_content: ArrayBuffer): Promise<string> {
     // For now, return a message asking user to copy-paste text
     // In production, you'd integrate with a PDF parsing library
-    throw new Error('Обработка PDF пока не реализована. Пожалуйста, скопируйте и вставьте текст.');
+    throw new Error(
+      'Обработка PDF пока не реализована. Пожалуйста, скопируйте и вставьте текст.'
+    );
   }
 
   /**
@@ -93,7 +100,9 @@ export class DocumentService {
   private async extractTextFromDOCX(_content: ArrayBuffer): Promise<string> {
     // For now, return a message asking user to copy-paste text
     // In production, you'd integrate with a DOCX parsing library
-    throw new Error('Обработка DOCX пока не реализована. Пожалуйста, скопируйте и вставьте текст.');
+    throw new Error(
+      'Обработка DOCX пока не реализована. Пожалуйста, скопируйте и вставьте текст.'
+    );
   }
 
   /**
@@ -110,28 +119,39 @@ export class DocumentService {
     };
   }
 
-
   /**
    * Count words in text
    */
   private countWords(text: string): number {
-    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    return text
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
   }
 
   /**
    * Validate document content
    */
-  validateDocument(document: ProcessedDocument): { isValid: boolean; error?: string } {
+  validateDocument(document: ProcessedDocument): {
+    isValid: boolean;
+    error?: string;
+  } {
     if (!document.text || document.text.trim().length === 0) {
       return { isValid: false, error: 'Документ пустой' };
     }
 
     if (document.wordCount < 10) {
-      return { isValid: false, error: 'Слишком короткий текст (минимум 10 слов)' };
+      return {
+        isValid: false,
+        error: 'Слишком короткий текст (минимум 10 слов)',
+      };
     }
 
     if (document.wordCount > 5000) {
-      return { isValid: false, error: 'Слишком длинный текст (максимум 5000 слов)' };
+      return {
+        isValid: false,
+        error: 'Слишком длинный текст (максимум 5000 слов)',
+      };
     }
 
     return { isValid: true };
@@ -142,21 +162,40 @@ export class DocumentService {
    */
   detectDocumentType(text: string): 'resume' | 'job_post' | 'unknown' {
     const lowerText = text.toLowerCase();
-    
+
     // Resume indicators
     const resumeKeywords = [
-      'experience', 'education', 'skills', 'resume', 'cv', 'curriculum vitae',
-      'employment', 'work history', 'qualifications', 'achievements'
-    ];
-    
-    // Job post indicators
-    const jobKeywords = [
-      'requirements', 'responsibilities', 'job description', 'position',
-      'we are looking for', 'join our team', 'apply', 'salary', 'benefits'
+      'experience',
+      'education',
+      'skills',
+      'resume',
+      'cv',
+      'curriculum vitae',
+      'employment',
+      'work history',
+      'qualifications',
+      'achievements',
     ];
 
-    const resumeScore = resumeKeywords.filter(keyword => lowerText.includes(keyword)).length;
-    const jobScore = jobKeywords.filter(keyword => lowerText.includes(keyword)).length;
+    // Job post indicators
+    const jobKeywords = [
+      'requirements',
+      'responsibilities',
+      'job description',
+      'position',
+      'we are looking for',
+      'join our team',
+      'apply',
+      'salary',
+      'benefits',
+    ];
+
+    const resumeScore = resumeKeywords.filter((keyword) =>
+      lowerText.includes(keyword)
+    ).length;
+    const jobScore = jobKeywords.filter((keyword) =>
+      lowerText.includes(keyword)
+    ).length;
 
     if (resumeScore > jobScore && resumeScore >= 2) {
       return 'resume';

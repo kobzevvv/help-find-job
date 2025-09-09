@@ -2,7 +2,11 @@
  * User session management service
  */
 
-import { UserSession, ConversationState, ProcessedDocument } from '../types/session';
+import {
+  UserSession,
+  ConversationState,
+  ProcessedDocument,
+} from '../types/session';
 
 export class SessionService {
   private kv: KVNamespace;
@@ -36,12 +40,10 @@ export class SessionService {
   async saveSession(session: UserSession): Promise<boolean> {
     try {
       session.lastActivity = new Date().toISOString();
-      
-      await this.kv.put(
-        `session:${session.userId}`,
-        JSON.stringify(session),
-        { expirationTtl: this.ttlSeconds }
-      );
+
+      await this.kv.put(`session:${session.userId}`, JSON.stringify(session), {
+        expirationTtl: this.ttlSeconds,
+      });
 
       return true;
     } catch (error) {
@@ -53,9 +55,13 @@ export class SessionService {
   /**
    * Create new session
    */
-  createSession(userId: number, chatId: number, language?: string): UserSession {
+  createSession(
+    userId: number,
+    chatId: number,
+    language?: string
+  ): UserSession {
     const now = new Date().toISOString();
-    
+
     return {
       userId,
       chatId,
@@ -69,7 +75,10 @@ export class SessionService {
   /**
    * Update session state
    */
-  async updateState(userId: number, state: ConversationState): Promise<boolean> {
+  async updateState(
+    userId: number,
+    state: ConversationState
+  ): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
@@ -82,7 +91,10 @@ export class SessionService {
   /**
    * Add resume to session
    */
-  async addResume(userId: number, document: ProcessedDocument): Promise<boolean> {
+  async addResume(
+    userId: number,
+    document: ProcessedDocument
+  ): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
@@ -96,7 +108,10 @@ export class SessionService {
   /**
    * Add job post to session
    */
-  async addJobPost(userId: number, document: ProcessedDocument): Promise<boolean> {
+  async addJobPost(
+    userId: number,
+    document: ProcessedDocument
+  ): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
@@ -120,7 +135,7 @@ export class SessionService {
     session.state = 'idle';
     session.resume = undefined;
     session.jobPost = undefined;
-    
+
     return await this.saveSession(session);
   }
 
