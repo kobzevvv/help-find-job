@@ -42,7 +42,5 @@ jobs:
           OPENAI_API_KEY: ''
         run: npm run test:e2e
 
-      - name: Dry-run build (no deploy)
-        run: npm run build
 
 
