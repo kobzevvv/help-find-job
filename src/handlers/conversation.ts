@@ -468,7 +468,7 @@ export class ConversationHandler {
     // Send summary first
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: `📊 **COMPREHENSIVE RESUME ANALYSIS**\n\n${analysis.summary}\n\n📈 **Overall Match Score: ${analysis.overallScore}/100**`,
+      text: `📊 **КОМПЛЕКСНЫЙ АНАЛИЗ РЕЗЮМЕ**\n\n${analysis.summary}\n\n📈 **Итоговая оценка соответствия: ${analysis.overallScore}/100**`,
       parse_mode: 'Markdown',
     });
 
@@ -481,7 +481,7 @@ export class ConversationHandler {
     // Send final message
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '💡 **Want to analyze another job posting?** Just send /resume_and_job_post_match again!\n\n🔬 **For testing?** Use the test files in /tests folder.',
+      text: '💡 **Хотите проанализировать другую вакансию?** Отправьте команду /resume_and_job_post_match ещё раз!\n\n🔬 **Для теста** можно использовать файлы из папки /tests.',
     });
   }
 
@@ -489,16 +489,16 @@ export class ConversationHandler {
    * Send headline analysis details
    */
   private async sendHeadlineAnalysis(chatId: number, headlines: any): Promise<void> {
-    const message = `🏷️ **HEADLINES ANALYSIS** (${headlines.matchScore}/100)
+    const message = `🏷️ **АНАЛИЗ ЗАГОЛОВКОВ** (${headlines.matchScore}/100)
 
-**Job Title:** ${headlines.jobTitle}
-**Your Titles:** ${headlines.candidateTitles.join(', ')}
+**Название вакансии:** ${headlines.jobTitle}
+**Ваши должности:** ${headlines.candidateTitles.join(', ')}
 
-**Analysis:** ${headlines.explanation}
+**Анализ:** ${headlines.explanation}
 
-${headlines.problems.length > 0 ? `🚨 **Issues:**\n${headlines.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
+${headlines.problems.length > 0 ? `🚨 **Проблемы:**\n${headlines.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
 
-${headlines.recommendations.length > 0 ? `💡 **Recommendations:**\n${headlines.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
+${headlines.recommendations.length > 0 ? `💡 **Рекомендации:**\n${headlines.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
 
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -511,19 +511,19 @@ ${headlines.recommendations.length > 0 ? `💡 **Recommendations:**\n${headlines
    * Send skills analysis details
    */
   private async sendSkillsAnalysis(chatId: number, skills: any): Promise<void> {
-    const message = `🛠️ **SKILLS ANALYSIS** (${skills.matchScore}/100)
+    const message = `🛠️ **АНАЛИЗ НАВЫКОВ** (${skills.matchScore}/100)
 
-**Requested Skills:** ${skills.requestedSkills.join(', ')}
-**Your Skills:** ${skills.candidateSkills.join(', ')}
-**✅ Matching:** ${skills.matchingSkills.join(', ')}
-**❌ Missing:** ${skills.missingSkills.join(', ')}
-**➕ Additional:** ${skills.additionalSkills.join(', ')}
+**Навыки из вакансии:** ${skills.requestedSkills.join(', ')}
+**Ваши навыки:** ${skills.candidateSkills.join(', ')}
+**✅ Совпадают:** ${skills.matchingSkills.join(', ')}
+**❌ Отсутствуют:** ${skills.missingSkills.join(', ')}
+**➕ Дополнительно:** ${skills.additionalSkills.join(', ')}
 
-**Analysis:** ${skills.explanation}
+**Анализ:** ${skills.explanation}
 
-${skills.problems.length > 0 ? `🚨 **Issues:**\n${skills.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
+${skills.problems.length > 0 ? `🚨 **Проблемы:**\n${skills.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
 
-${skills.recommendations.length > 0 ? `💡 **Recommendations:**\n${skills.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
+${skills.recommendations.length > 0 ? `💡 **Рекомендации:**\n${skills.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
 
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -538,23 +538,25 @@ ${skills.recommendations.length > 0 ? `💡 **Recommendations:**\n${skills.recom
   private async sendExperienceAnalysis(chatId: number, experience: any): Promise<void> {
     const seniorityEmoji = experience.seniorityMatch === 'perfect-match' ? '✅' : 
                           experience.seniorityMatch === 'over-qualified' ? '⬆️' : '⬇️';
+    const seniorityText = experience.seniorityMatch === 'perfect-match' ? 'идеальное соответствие' :
+                          experience.seniorityMatch === 'over-qualified' ? 'переквалифицирован' : 'недостаточный уровень';
 
-    const message = `💼 **EXPERIENCE ANALYSIS** (${experience.experienceMatch}/100)
+    const message = `💼 **АНАЛИЗ ОПЫТА** (${experience.experienceMatch}/100)
 
-**Your Experience:** ${experience.candidateExperience.join(', ')}
-**Job Requirements:** ${experience.jobRequirements.join(', ')}
+**Ваш опыт:** ${experience.candidateExperience.join(', ')}
+**Требования вакансии:** ${experience.jobRequirements.join(', ')}
 
-**Seniority Match:** ${seniorityEmoji} ${experience.seniorityMatch}
+**Соответствие уровню:** ${seniorityEmoji} ${seniorityText}
 ${experience.seniorityExplanation}
 
-**Quantity Match:** ${experience.quantityMatch}/100
+**Количественное соответствие:** ${experience.quantityMatch}/100
 ${experience.quantityExplanation}
 
-**Analysis:** ${experience.explanation}
+**Анализ:** ${experience.explanation}
 
-${experience.problems.length > 0 ? `🚨 **Issues:**\n${experience.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
+${experience.problems.length > 0 ? `🚨 **Проблемы:**\n${experience.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
 
-${experience.recommendations.length > 0 ? `💡 **Recommendations:**\n${experience.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
+${experience.recommendations.length > 0 ? `💡 **Рекомендации:**\n${experience.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
 
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -572,21 +574,21 @@ ${experience.recommendations.length > 0 ? `💡 **Recommendations:**\n${experien
     const scheduleEmoji = conditions.schedule.compatible ? '✅' : '❌';
     const formatEmoji = conditions.workFormat.compatible ? '✅' : '❌';
 
-    const message = `📍 **JOB CONDITIONS ANALYSIS** (${conditions.overallScore}/100)
+    const message = `📍 **АНАЛИЗ УСЛОВИЙ РАБОТЫ** (${conditions.overallScore}/100)
 
-${locationEmoji} **Location:** ${conditions.location.jobLocation} vs ${conditions.location.candidateLocation}
+${locationEmoji} **Локация:** ${conditions.location.jobLocation} vs ${conditions.location.candidateLocation}
 ${conditions.location.explanation}
 
-${salaryEmoji} **Salary:** ${conditions.salary.jobSalary} vs ${conditions.salary.candidateExpectation}
+${salaryEmoji} **Зарплата:** ${conditions.salary.jobSalary} vs ${conditions.salary.candidateExpectation}
 ${conditions.salary.explanation}
 
-${scheduleEmoji} **Schedule:** ${conditions.schedule.jobSchedule} vs ${conditions.schedule.candidatePreference}
+${scheduleEmoji} **График:** ${conditions.schedule.jobSchedule} vs ${conditions.schedule.candidatePreference}
 ${conditions.schedule.explanation}
 
-${formatEmoji} **Work Format:** ${conditions.workFormat.jobFormat} vs ${conditions.workFormat.candidatePreference}
+${formatEmoji} **Формат работы:** ${conditions.workFormat.jobFormat} vs ${conditions.workFormat.candidatePreference}
 ${conditions.workFormat.explanation}
 
-**Overall Assessment:** ${conditions.explanation}`;
+**Общая оценка:** ${conditions.explanation}`;
 
     await this.telegramService.sendMessage({
       chat_id: chatId,
@@ -603,7 +605,7 @@ ${conditions.workFormat.explanation}
     try {
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '🧪 **RUNNING TEST ANALYSIS**\n\nUsing test resume and job post files...\n\nThis will demonstrate the comprehensive analysis features.',
+        text: '🧪 **ЗАПУСК ТЕСТОВОГО АНАЛИЗА**\n\nИспользуются тестовые файлы резюме и вакансии...\n\nЭто продемонстрирует возможности комплексного анализа.',
       });
 
       // Load test files (these should be the test files you provided)
@@ -619,7 +621,7 @@ ${conditions.workFormat.explanation}
 
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '✅ **TEST ANALYSIS COMPLETED**\n\nHere are the results using our enhanced analysis system:',
+        text: '✅ **ТЕСТОВЫЙ АНАЛИЗ ЗАВЕРШЁН**\n\nНиже результаты с использованием расширенного анализа:',
       });
 
       await this.sendEnhancedAnalysisResults(chatId, enhancedAnalysis);
@@ -628,7 +630,7 @@ ${conditions.workFormat.explanation}
       console.error('Error during test analysis:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Test analysis failed: ' + (error as Error).message,
+        text: '❌ Тестовый анализ завершился ошибкой: ' + (error as Error).message,
       });
     }
   }
@@ -720,7 +722,7 @@ SPIN-продажи
   private async sendWelcomeMessage(chatId: number): Promise<void> {
     const sent = await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '👋 Welcome to Resume Matcher Bot!\n\nI help you analyze how well your resume matches job descriptions using AI.\n\n🚀 To get started, send:\n/resume_and_job_post_match\n\n❓ Need help? Send /help',
+      text: '👋 Добро пожаловать в бота сопоставления резюме и вакансии!\n\nЯ помогу проанализировать соответствие вашего резюме описанию вакансии с помощью ИИ.\n\n🚀 Чтобы начать, отправьте:\n/resume_and_job_post_match\n\n❓ Нужна помощь? Отправьте /help',
     });
     if (sent) {
       await this.loggingService.logBotResponse(0, chatId, 'Welcome message sent');
@@ -735,7 +737,7 @@ SPIN-продажи
   private async sendHelpMessage(chatId: number): Promise<void> {
     const sent = await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Resume Matcher Bot Commands\n\n/resume_and_job_post_match - Start resume analysis\n/help - Show this help message\n/cancel - Cancel current process\n\nOr just type "help match resume" to get started!',
+      text: '🤖 Команды бота сопоставления резюме\n\n/resume_and_job_post_match - начать анализ резюме и вакансии\n/help - показать эту справку\n/cancel - отменить текущий процесс\n\nИли просто отправьте любое сообщение, чтобы начать.',
     });
     if (sent) {
       await this.loggingService.logBotResponse(0, chatId, 'Help message sent');
@@ -751,7 +753,7 @@ SPIN-продажи
     await this.sessionService.completeSession(userId);
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '✅ Process cancelled. You can start a new analysis anytime with /resume_and_job_post_match',
+      text: '✅ Процесс отменён. Вы можете начать новый анализ в любое время командой /resume_and_job_post_match',
     });
   }
 
