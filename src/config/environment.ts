@@ -237,7 +237,10 @@ export class EnvironmentConfigurationService {
     const envFromVar = this.env.ENVIRONMENT;
 
     // Validate and return
-    if (['development', 'staging', 'production'].includes(envFromVar)) {
+    if (
+      envFromVar &&
+      ['development', 'staging', 'production'].includes(envFromVar)
+    ) {
       return envFromVar as 'development' | 'staging' | 'production';
     }
 
@@ -250,7 +253,8 @@ export class EnvironmentConfigurationService {
    */
   private getBotToken(environment: string): string {
     // NEW: Try environment-specific variable first
-    const envSpecific = this.env[`BOT_TOKEN_${environment.toUpperCase()}`];
+    const envKey = `BOT_TOKEN_${environment.toUpperCase()}` as keyof Env;
+    const envSpecific = this.env[envKey] as string | undefined;
     if (envSpecific) return envSpecific;
 
     // FALLBACK: Old variable for migration compatibility
@@ -270,7 +274,8 @@ export class EnvironmentConfigurationService {
    */
   private getBotUsername(environment: string): string {
     // NEW: Try environment-specific variable first
-    const envSpecific = this.env[`BOT_USERNAME_${environment.toUpperCase()}`];
+    const envKey = `BOT_USERNAME_${environment.toUpperCase()}` as keyof Env;
+    const envSpecific = this.env[envKey] as string | undefined;
     if (envSpecific) return envSpecific;
 
     // Known usernames
@@ -294,7 +299,8 @@ export class EnvironmentConfigurationService {
     }
 
     // NEW: Try environment-specific variable first
-    const envSpecific = this.env[`WEBHOOK_SECRET_${environment.toUpperCase()}`];
+    const envKey = `WEBHOOK_SECRET_${environment.toUpperCase()}` as keyof Env;
+    const envSpecific = this.env[envKey] as string | undefined;
     if (envSpecific) return envSpecific;
 
     // FALLBACK: Old variable
@@ -306,7 +312,8 @@ export class EnvironmentConfigurationService {
    */
   private getWorkerUrl(environment: string): string {
     // NEW: Try environment-specific variable first
-    const envSpecific = this.env[`WORKER_URL_${environment.toUpperCase()}`];
+    const envKey = `WORKER_URL_${environment.toUpperCase()}` as keyof Env;
+    const envSpecific = this.env[envKey] as string | undefined;
     if (envSpecific) return envSpecific;
 
     // FALLBACK: Known URLs (update these to match your actual worker URLs)
@@ -332,7 +339,8 @@ export class EnvironmentConfigurationService {
    */
   private getWorkerName(environment: string): string {
     // NEW: Try environment-specific variable first
-    const envSpecific = this.env[`WORKER_NAME_${environment.toUpperCase()}`];
+    const envKey = `WORKER_NAME_${environment.toUpperCase()}` as keyof Env;
+    const envSpecific = this.env[envKey] as string | undefined;
     if (envSpecific) return envSpecific;
 
     // FALLBACK: Known worker names from wrangler.toml
@@ -351,7 +359,8 @@ export class EnvironmentConfigurationService {
    */
   private getAdminPassword(environment: string): string {
     // NEW: Try environment-specific variable first
-    const envSpecific = this.env[`ADMIN_PASSWORD_${environment.toUpperCase()}`];
+    const envKey = `ADMIN_PASSWORD_${environment.toUpperCase()}` as keyof Env;
+    const envSpecific = this.env[envKey] as string | undefined;
     if (envSpecific) return envSpecific;
 
     // FALLBACK: Old variables

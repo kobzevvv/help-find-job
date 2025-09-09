@@ -20,6 +20,19 @@ import { Env } from '../index';
 // Type for service instances (broad type to accommodate various services)
 type ServiceInstance = object;
 
+// Interface for services that can be health-checked
+interface HealthCheckable {
+  healthCheck?(): Promise<ServiceHealth>;
+}
+
+// Interface for services that can be shut down
+interface Shutdownable {
+  shutdown?(): Promise<void>;
+}
+
+// Combined interface for service lifecycle
+type ManagedService = ServiceInstance & HealthCheckable & Shutdownable;
+
 export interface ServiceFactory<T> {
   create(container: ServiceContainer): Promise<T>;
   dependencies: string[];
@@ -43,8 +56,8 @@ export interface ServiceInfo {
  * Main dependency injection container
  */
 export class ServiceContainer {
-  private services: Map<string, ServiceInstance> = new Map();
-  private factories: Map<string, ServiceFactory<ServiceInstance>> = new Map();
+  private services: Map<string, ManagedService> = new Map();
+  private factories: Map<string, ServiceFactory<unknown>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
 
@@ -58,7 +71,7 @@ export class ServiceContainer {
       throw new Error(`Service ${name} is already registered`);
     }
 
-    this.factories.set(name, factory);
+    this.factories.set(name, factory as ServiceFactory<unknown>);
   }
 
   /**
@@ -94,7 +107,7 @@ export class ServiceContainer {
       const service = await factory.create(this);
 
       // Cache and mark as initialized
-      this.services.set(name, service);
+      this.services.set(name, service as ManagedService);
       this.initialized.add(name);
 
       console.log(`✅ Service initialized: ${name}`);
