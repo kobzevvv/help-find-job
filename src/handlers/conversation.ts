@@ -7,13 +7,15 @@ import { SessionService } from '../services/session';
 import { TelegramService } from '../services/telegram';
 import { DocumentService } from '../services/document';
 import { AIService } from '../services/ai';
+import { EnhancedAIService } from '../services/enhanced-ai';
 import { LoggingService } from '../services/logging';
+import { EnhancedAnalysis } from '../types/session';
 
 export class ConversationHandler {
   private sessionService: SessionService;
   private telegramService: TelegramService;
   private documentService: DocumentService;
-  private aiService: AIService;
+  private enhancedAIService: EnhancedAIService;
   private loggingService: LoggingService;
   private environment: string;
   private adminPassword: string;
@@ -22,7 +24,8 @@ export class ConversationHandler {
     sessionService: SessionService,
     telegramService: TelegramService,
     documentService: DocumentService,
-    aiService: AIService,
+    _aiService: AIService, // Keep parameter for backwards compatibility
+    enhancedAIService: EnhancedAIService,
     loggingService: LoggingService,
     environment: string = 'development',
     adminPassword: string = 'defaultpassword'
@@ -30,7 +33,8 @@ export class ConversationHandler {
     this.sessionService = sessionService;
     this.telegramService = telegramService;
     this.documentService = documentService;
-    this.aiService = aiService;
+    // aiService parameter kept for backwards compatibility but not stored
+    this.enhancedAIService = enhancedAIService;
     this.loggingService = loggingService;
     this.environment = environment;
     this.adminPassword = adminPassword;
@@ -43,7 +47,16 @@ export class ConversationHandler {
     const userId = message.from?.id;
     const chatId = message.chat.id;
 
+    console.log('🎯 CONVERSATION HANDLER:', {
+      userId,
+      chatId,
+      text: message.text,
+      hasFrom: !!message.from,
+      timestamp: new Date().toISOString()
+    });
+
     if (!userId) {
+      console.error('❌ Missing user ID in message');
       await this.loggingService.logError('INVALID_MESSAGE', 'No user ID in message', new Error('Missing user ID'), undefined, chatId);
       return;
     }
@@ -90,6 +103,7 @@ export class ConversationHandler {
       }
 
     } catch (error) {
+      console.error('💥 MESSAGE HANDLER ERROR:', error);
       await this.loggingService.logError('MESSAGE_HANDLER_ERROR', 'Error in message handler', error as Error, userId, chatId);
       await this.telegramService.sendMessage({
         chat_id: chatId,
@@ -253,6 +267,10 @@ export class ConversationHandler {
         await this.handleSimpleLogSummaryCommand(fullText, chatId, userId);
         break;
 
+      case '/test_resume_match':
+        await this.handleTestResumeMatch(chatId, userId);
+        break;
+
       default:
         await this.sendHelpMessage(chatId);
     }
@@ -341,12 +359,12 @@ export class ConversationHandler {
   }
 
   /**
-   * Start AI analysis
+   * Start AI analysis using enhanced service
    */
   private async startAnalysis(chatId: number, userId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🔄 Analyzing your resume against the job requirements...\n\nThis may take 30-60 seconds.',
+      text: '🔄 Performing comprehensive resume analysis...\n\nThis will analyze:\n• Headlines & Job Titles\n• Skills Match\n• Experience Alignment\n• Job Conditions\n\nThis may take 60-90 seconds.',
     });
 
     try {
@@ -355,53 +373,277 @@ export class ConversationHandler {
         throw new Error('Missing resume or job post data');
       }
 
-      const analysis = await this.aiService.analyzeMatch(session.resume, session.jobPost);
-      if (!analysis) {
-        throw new Error('Analysis failed');
+      console.log('Starting enhanced analysis for user:', userId);
+      const enhancedAnalysis = await this.enhancedAIService.analyzeResumeJobMatch(session.resume, session.jobPost);
+      
+      if (!enhancedAnalysis) {
+        throw new Error('Enhanced analysis failed');
       }
 
-      await this.sendAnalysisResults(chatId, analysis);
+      await this.sendEnhancedAnalysisResults(chatId, enhancedAnalysis);
       await this.sessionService.completeSession(userId);
 
     } catch (error) {
-      console.error('Error during analysis:', error);
+      console.error('Error during enhanced analysis:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Sorry, the analysis failed. Please try again later.',
+        text: '❌ Sorry, the analysis failed. Please try again later.\n\nError details: ' + (error as Error).message,
       });
       await this.sessionService.completeSession(userId);
     }
   }
 
   /**
-   * Send analysis results
+   * Send enhanced analysis results
    */
-  private async sendAnalysisResults(chatId: number, analysis: any): Promise<void> {
-    const message = `📊 **ANALYSIS RESULTS**
+  private async sendEnhancedAnalysisResults(chatId: number, analysis: EnhancedAnalysis): Promise<void> {
+    // Send summary first
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: `📊 **COMPREHENSIVE RESUME ANALYSIS**\n\n${analysis.summary}\n\n📈 **Overall Match Score: ${analysis.overallScore}/100**`,
+      parse_mode: 'Markdown',
+    });
 
-${analysis.summary}
+    // Send detailed breakdown in separate messages to avoid length limits
+    await this.sendHeadlineAnalysis(chatId, analysis.headlines);
+    await this.sendSkillsAnalysis(chatId, analysis.skills);
+    await this.sendExperienceAnalysis(chatId, analysis.experience);
+    await this.sendJobConditionsAnalysis(chatId, analysis.jobConditions);
 
-📄 **General Matching**: ${analysis.general.score}/100
-✅ Strengths: ${analysis.general.strengths.join(', ')}
-⚠️ Improvements: ${analysis.general.improvements.join(', ')}
+    // Send final message
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: '💡 **Want to analyze another job posting?** Just send /resume_and_job_post_match again!\n\n🔬 **For testing?** Use the test files in /tests folder.',
+    });
+  }
 
-🛠️ **Skills Analysis**: ${analysis.skills.score}/100
-✅ Strengths: ${analysis.skills.strengths.join(', ')}
-⚠️ Improvements: ${analysis.skills.improvements.join(', ')}
+  /**
+   * Send headline analysis details
+   */
+  private async sendHeadlineAnalysis(chatId: number, headlines: any): Promise<void> {
+    const message = `🏷️ **HEADLINES ANALYSIS** (${headlines.matchScore}/100)
 
-💼 **Experience Evaluation**: ${analysis.experience.score}/100
-✅ Strengths: ${analysis.experience.strengths.join(', ')}
-⚠️ Improvements: ${analysis.experience.improvements.join(', ')}
+**Job Title:** ${headlines.jobTitle}
+**Your Titles:** ${headlines.candidateTitles.join(', ')}
 
-📈 **Overall Match Score: ${analysis.overallScore}/100**
+**Analysis:** ${headlines.explanation}
 
-💡 Want to analyze another job posting? Just send /resume_and_job_post_match again!`;
+${headlines.problems.length > 0 ? `🚨 **Issues:**\n${headlines.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
+
+${headlines.recommendations.length > 0 ? `💡 **Recommendations:**\n${headlines.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
 
     await this.telegramService.sendMessage({
       chat_id: chatId,
       text: message,
       parse_mode: 'Markdown',
     });
+  }
+
+  /**
+   * Send skills analysis details
+   */
+  private async sendSkillsAnalysis(chatId: number, skills: any): Promise<void> {
+    const message = `🛠️ **SKILLS ANALYSIS** (${skills.matchScore}/100)
+
+**Requested Skills:** ${skills.requestedSkills.join(', ')}
+**Your Skills:** ${skills.candidateSkills.join(', ')}
+**✅ Matching:** ${skills.matchingSkills.join(', ')}
+**❌ Missing:** ${skills.missingSkills.join(', ')}
+**➕ Additional:** ${skills.additionalSkills.join(', ')}
+
+**Analysis:** ${skills.explanation}
+
+${skills.problems.length > 0 ? `🚨 **Issues:**\n${skills.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
+
+${skills.recommendations.length > 0 ? `💡 **Recommendations:**\n${skills.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
+
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'Markdown',
+    });
+  }
+
+  /**
+   * Send experience analysis details
+   */
+  private async sendExperienceAnalysis(chatId: number, experience: any): Promise<void> {
+    const seniorityEmoji = experience.seniorityMatch === 'perfect-match' ? '✅' : 
+                          experience.seniorityMatch === 'over-qualified' ? '⬆️' : '⬇️';
+
+    const message = `💼 **EXPERIENCE ANALYSIS** (${experience.experienceMatch}/100)
+
+**Your Experience:** ${experience.candidateExperience.join(', ')}
+**Job Requirements:** ${experience.jobRequirements.join(', ')}
+
+**Seniority Match:** ${seniorityEmoji} ${experience.seniorityMatch}
+${experience.seniorityExplanation}
+
+**Quantity Match:** ${experience.quantityMatch}/100
+${experience.quantityExplanation}
+
+**Analysis:** ${experience.explanation}
+
+${experience.problems.length > 0 ? `🚨 **Issues:**\n${experience.problems.map((p: string) => `• ${p}`).join('\n')}` : ''}
+
+${experience.recommendations.length > 0 ? `💡 **Recommendations:**\n${experience.recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
+
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'Markdown',
+    });
+  }
+
+  /**
+   * Send job conditions analysis details
+   */
+  private async sendJobConditionsAnalysis(chatId: number, conditions: any): Promise<void> {
+    const locationEmoji = conditions.location.compatible ? '✅' : '❌';
+    const salaryEmoji = conditions.salary.compatible ? '✅' : '❌';
+    const scheduleEmoji = conditions.schedule.compatible ? '✅' : '❌';
+    const formatEmoji = conditions.workFormat.compatible ? '✅' : '❌';
+
+    const message = `📍 **JOB CONDITIONS ANALYSIS** (${conditions.overallScore}/100)
+
+${locationEmoji} **Location:** ${conditions.location.jobLocation} vs ${conditions.location.candidateLocation}
+${conditions.location.explanation}
+
+${salaryEmoji} **Salary:** ${conditions.salary.jobSalary} vs ${conditions.salary.candidateExpectation}
+${conditions.salary.explanation}
+
+${scheduleEmoji} **Schedule:** ${conditions.schedule.jobSchedule} vs ${conditions.schedule.candidatePreference}
+${conditions.schedule.explanation}
+
+${formatEmoji} **Work Format:** ${conditions.workFormat.jobFormat} vs ${conditions.workFormat.candidatePreference}
+${conditions.workFormat.explanation}
+
+**Overall Assessment:** ${conditions.explanation}`;
+
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'Markdown',
+    });
+  }
+
+
+  /**
+   * Handle test resume match command - uses test files for analysis
+   */
+  private async handleTestResumeMatch(chatId: number, _userId: number): Promise<void> {
+    try {
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '🧪 **RUNNING TEST ANALYSIS**\n\nUsing test resume and job post files...\n\nThis will demonstrate the comprehensive analysis features.',
+      });
+
+      // Load test files (these should be the test files you provided)
+      const testResume = this.documentService.processTextInput(this.getTestResumeText());
+      const testJobPost = this.documentService.processTextInput(this.getTestJobPostText());
+
+      console.log('Running test analysis with enhanced AI service...');
+      const enhancedAnalysis = await this.enhancedAIService.analyzeResumeJobMatch(testResume, testJobPost);
+      
+      if (!enhancedAnalysis) {
+        throw new Error('Test analysis failed');
+      }
+
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '✅ **TEST ANALYSIS COMPLETED**\n\nHere are the results using our enhanced analysis system:',
+      });
+
+      await this.sendEnhancedAnalysisResults(chatId, enhancedAnalysis);
+
+    } catch (error) {
+      console.error('Error during test analysis:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Test analysis failed: ' + (error as Error).message,
+      });
+    }
+  }
+
+  /**
+   * Get test resume text
+   */
+  private getTestResumeText(): string {
+    return `Мужчина
+Продакт-менеджер
+40 лет  •  Был вчера
+350 000 ₽
+Активно ищет работу
+Есть подтверждённые навыки
+Последнее место работы
+ITV
+Ведущий продакт-менеджер  •  Декабрь 2019 — по настоящее время
+- налаживание и поддержка горизонтальных связей между командами, формирование проектных команд для решения задач.
+- управление командой разработчиков.
+- формирование видения одного из основных продуктов компании и его стратегии развития на основе агрегированной информации и данных, от партнеров, клиентов - рынка в целом.
+- управление процессами продуктовой разработки от выявления потребности до анализа результатов.
+- прямое и матричное управление командами разработки, QA, PM, взаимодействие с командами Support, project managers, marketing, коммерческим департамента. Со специалистами технологических, коммерческих партнёров и конечных клиентов различного уровня.
+- наставничество junior product managers
+- Распределение задач в команде проекта
+- Конкретизация целей проекта совместно с заказчиком и заинтересованными сторонами
+- Ведение повседневных встреч, совещаний и обсуждений в команде
+- Распределение ролей и ответственности в проектной команде
+- Внедрение Agile- и Scrum-принципов и процессов на уровне подразделения или компании
+- Доработка и развитие продукта после его запуска
+- Постановка задач команде разработки на реализацию или доработку программного продукта
+- Формирование, декомпозиция и актуализация бэклога задач проекта
+
+- развитие и создание b2b2c – on premise и cloud продуктов для CCTV и SAS
+- разработка, управление, приоритизация и внедрение гипотез и продуктов
+- оценка, проработка, мониторинг и контроль внедрения новых функций, и обновление существующего функционала продуктов:
+Адаптация системы дашбордов для задач ритейла, интеграция с кассовым ПО и ПО автоматизации.
+Разработка бридж решения для подключения камер и кассовых терминалов к облачной инфраструктуре
+Разработка новой архитектуры VMS продукта, на базе требований рынка и новых требований интегрированных решений
+Cоздание Cloud платформы для построения Vsas для партнеров компании на базе существующего продукта, включая: общую архитектуру продукта, frontend и backend, личный кабинет, disaster recovery, multi tenancy, систему оперативных отчетов и аудита действий пользователя, оптимизацию процесса создания камер и инстансов, подготовку маркетинговых материалов и разработку концепции продаж платформы. На данный момент к Vsas платформам, развернутым на базе партнеров, в том числе телеком провайдеров по всему миру, подключено несколько тысяч устройств. Среди них один из крупнейших телеком провайдеров Израиля.
+Гражданство
+Россия
+Регион и переезд
+Москва`;
+  }
+
+  /**
+   * Get test job post text
+   */
+  private getTestJobPostText(): string {
+    return `Ведущий менеджер по продажам / Senior sales manager. Programmatic-iTV
+Стандарт
+Истекает 03.10
+Москва·Опыт 3–6 лет·от 280 000 до 350 000 ₽ за месяц, на руки
+
+Between Exchange – крупнейшая рекламная биржа. Поддерживаем SSP и DSP инвентарь на более чем 100 000 площадок. Рунет + Азия. На десктопе, в мобайле и Smart TV.
+
+Обязанности:
+Конакты, встречи, брифы, коммерческие предложения
+Закрытие сделок
+
+Требования:
+опыт с tv-рекламой
+опыт в продажах с длинным циклом сделки
+Хорошо понимать где лежат и кем распределяются перфомансные, охватные и медийные бюджеты рекламодателей и рекламных агентств.
+Иметь налаженные, идеально если дружеские отношения с лицами принимающими решения самого высокого уровня рекламных агентств и крупнейших рекламодателей (CEO, CMO, CPO, акционеры) и ТОП-менеджерами Tier 2, которые отвечают за заработок рекламных агентств
+
+Условия:
+Хороший оклад + процент с продаж
+Оформление по тк рф
+
+Ключевые навыки
+B2B Продажи
+Медийная реклама
+Активные продажи
+Digital Marketing
+Консультативные продажи
+Подготовка коммерческих предложений
+Теплые продажи
+SPIN-продажи
+Консультирование клиентов
+
+Где предстоит работать
+Кузнецкий мост, Лубянка, Цветной бульвар, Москва, Трубная площадь`;
   }
 
   /**

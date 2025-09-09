@@ -1,73 +1,84 @@
 # 🤖 Telegram Resume Matcher Bot
 
-**AI-powered Telegram bot that analyzes how well your resume matches job descriptions**
+**Enterprise-grade AI-powered Telegram bot with advanced configuration management and dependency injection**
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kobzevvv/help-find-job)
 
 ## 📋 Overview
 
-This Telegram bot helps job seekers improve their chances by analyzing resume-job post compatibility using AI. The bot provides detailed feedback across three key dimensions:
+This production-ready Telegram bot analyzes resume-job compatibility using GPT-4, featuring enterprise-grade architecture:
 
+### **🎯 Analysis Capabilities**
 - **📄 General Matching**: Document structure, formatting, and basic information alignment
-- **🛠️ Skills Analysis**: Technical and soft skills comparison with gap identification  
-- **💼 Experience Evaluation**: Work experience relevance and achievement alignment
+- **🛠️ Skills Analysis**: Technical and soft skills comparison with detailed gap identification  
+- **💼 Experience Evaluation**: Work experience relevance with seniority assessment
+- **📍 Job Conditions**: Location, salary, schedule, and work format compatibility
+
+### **🏗️ Enterprise Architecture** 
+- **🔧 Dependency Injection Container**: Eliminates complex constructors, automatic service resolution
+- **⚙️ Centralized Configuration**: Environment-specific config with real-time validation
+- **🛡️ Safe Migration System**: Dual configuration support with comprehensive validation
+- **📊 Real-time Monitoring**: Service health checks, dependency graphs, performance metrics
 
 ## ✨ Features
 
+### **Core Functionality**
 - 🔄 **Conversational Interface**: Simple step-by-step interaction via Telegram
 - 📁 **Multiple File Formats**: Supports PDF, DOCX, and TXT documents
-- 🧠 **AI-Powered Analysis**: Uses GPT-4 for intelligent resume-job matching
-- ⚡ **Fast Processing**: Serverless architecture with sub-30 second response times
-- 🌍 **Global Deployment**: Runs on Cloudflare Workers for worldwide accessibility
-- 🔒 **Privacy First**: Documents are processed and immediately deleted
-- 🆓 **Open Source**: Easy to deploy your own instance
-- 🔍 **Admin Logging**: Simple password-based log access for debugging
+- 🧠 **Enhanced AI Analysis**: Multi-dimensional analysis with GPT-4
+- ⚡ **Fast Processing**: Sub-30 second response times with parallel AI requests
+- 🌍 **Global Deployment**: Cloudflare Workers with worldwide edge distribution
+
+### **Enterprise Features** 
+- 🏗️ **Dependency Injection**: Clean service architecture with automatic resolution
+- ⚙️ **Configuration Management**: Environment-specific settings with validation
+- 📊 **Real-time Monitoring**: Service health checks and dependency visualization
+- 🔒 **Security First**: Webhook validation, rate limiting, input sanitization
+- 🔍 **Advanced Debugging**: Comprehensive logging with masked secret display
+- 🚀 **Safe Deployments**: Automated validation and migration safety checks
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18+ 
-- [Cloudflare Account](https://dash.cloudflare.com/sign-up) (free tier works)
-- [Telegram Bot Token](https://core.telegram.org/bots#botfather)
-- [OpenAI API Key](https://platform.openai.com/api-keys)
-
-### 1️⃣ Clone and Install
-
+### **Option A: Instant Testing** (Recommended)
 ```bash
 git clone https://github.com/kobzevvv/help-find-job.git
 cd help-find-job
 npm install
+
+# Test immediately with public staging bot
+# No setup required - just try: @job_search_help_staging_bot
 ```
 
-### 2️⃣ Environment Setup
+### **Option B: Full Development Setup**
 
-#### **Option A: Quick Testing** (Recommended for contributors)
-```bash
-cp .env.staging .env
-# Edit .env and add your OpenAI API key - everything else is pre-configured
-```
+#### Prerequisites
+- [Node.js](https://nodejs.org/) 18+ 
+- [Cloudflare Account](https://dash.cloudflare.com/sign-up) (free tier works)
+- [OpenAI API Key](https://platform.openai.com/api-keys) (optional)
 
-Use the public staging bot [@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot) for testing!
-
-#### **Option B: Full Development Setup**
-```bash
-cp .env.example .env
-# Edit .env with your bot token, OpenAI API key, and other credentials
-```
-
-💡 **See `.env.example` for detailed step-by-step instructions on getting each credential.**
-
-### 3️⃣ Deploy and Test
-
+#### Safe Deployment with Validation
 ```bash
 # Authenticate with Cloudflare
 wrangler login
 
-# Deploy to development
-npm run deploy:dev
+# Deploy with comprehensive validation
+npm run deploy:safe:staging
 
-# Test with the staging bot or your own bot
+# Validate all services and configuration
+npm run validate:staging
+```
+
+#### **New: Advanced Commands**
+```bash
+# Service container status
+curl https://worker-url/services
+
+# Environment validation
+curl https://worker-url/validate-environment
+
+# Migration safety checks
+npm run validate:migration
+npm run validate:container
 ```
 
 ## 🤖 Bot Setup Guide
@@ -128,47 +139,46 @@ The bot includes simple admin commands for debugging and monitoring:
 - 🚫 **No persistent state** - clean and simple
 - 🔍 **Real-time debugging** - perfect for troubleshooting
 
-## 🔧 Cloudflare Workers Setup
+## 🚀 Safe Deployment System
 
-### Authentication
+### **Quick Setup**
 ```bash
-# Login to Cloudflare (opens browser for OAuth)
-wrangler login
+# One-command safe deployment with validation
+npm run deploy:safe:staging
 
-# Verify authentication
-wrangler whoami
+# Comprehensive validation
+npm run validate:staging
 ```
 
-### Create Required Resources
+### **Advanced Setup**
 ```bash
-# Create KV storage namespaces
-wrangler kv namespace create "SESSIONS" --env development
-wrangler kv namespace create "CACHE" --env development
+# Authentication
+wrangler login && wrangler whoami
 
-# Create D1 database
+# Create required resources (automatically documented in wrangler.toml)
+wrangler kv namespace create "SESSIONS" --env development
 wrangler d1 create telegram-bot-logs
 
-# Update wrangler.toml with the generated IDs
+# Environment-specific secret management
+wrangler secret put BOT_TOKEN_PRODUCTION --env production
+wrangler secret put OPENAI_API_KEY --env production
 ```
 
-### Set Secrets
+### **New Monitoring & Debugging**
 ```bash
-# For your development environment
-wrangler secret put TELEGRAM_BOT_TOKEN --env development
-wrangler secret put OPENAI_API_KEY --env development
-wrangler secret put WEBHOOK_SECRET --env development
-```
+# Service container status (NEW)
+curl https://worker-url/services
 
-### Deploy
-```bash
-# Development
-npm run deploy:dev
+# Configuration validation (NEW)
+curl https://worker-url/validate-environment
 
-# Staging (for maintainers)
-npm run deploy:staging
+# Migration safety checks (NEW)
+npm run validate:migration
+npm run validate:container
 
-# Production (for maintainers)
-npm run deploy:prod
+# Safe deployment with full validation (NEW)
+npm run deploy:safe:staging
+npm run deploy:safe:prod
 ```
 
 ## 📊 Usage Examples
@@ -234,36 +244,38 @@ Developer: /get_last_10_messages 12345678Bot:       📊 Fetching last 10 log me
            📈 Total entries: 10 | 🕐 Last 5 minutes | 🌍 production
 ```
 
-## 🏗️ Architecture
+## 🏗️ Enterprise Architecture
 
-### System Overview
+### **System Overview**
 ```
-[Telegram] ↔️ [Cloudflare Workers] ↔️ [OpenAI GPT-4]
-                      ↕️
-            [Cloudflare KV + D1 Storage]
+[Telegram API] ↔️ [Cloudflare Workers] ↔️ [OpenAI GPT-4]
+                           ↕️
+             [Service Container + Config Management]
+                           ↕️
+               [Cloudflare KV + D1 Storage]
 ```
 
-### Project Structure
+### **Project Structure** 
 ```
 help-find-job/
 ├── src/
-│   ├── handlers/           # Telegram message and webhook handlers
+│   ├── config/            # 🆕 Centralized configuration management
+│   ├── container/         # 🆕 Dependency injection container
+│   ├── handlers/          # Telegram message and webhook handlers
 │   ├── services/          # AI, document, logging, session services
-│   ├── types/            # TypeScript definitions
-│   └── index.ts          # Main entry point
-├── .env.example          # Environment variables template
-├── .env.staging          # Public staging configuration
-├── wrangler.toml         # Cloudflare Workers config
-├── package.json
-└── README.md
+│   ├── types/             # TypeScript definitions
+│   └── index.ts           # Main entry point
+├── scripts/              # 🆕 Deployment & validation scripts
+├── tests/                # Comprehensive test suite
+├── wrangler.toml         # Multi-environment Cloudflare config
+└── package.json          # 🆕 Enhanced with safe deployment commands
 ```
 
-### Environment Configuration
-
-- **`.env.example`** - Template for private environment variables
-- **`.env.staging`** - Public staging bot configuration (safe to commit)
-- **`.env`** - Your actual secrets (gitignored)
-- **`wrangler.toml`** - Cloudflare deployment settings
+### **New Architecture Features**
+- **🏗️ Dependency Injection**: Eliminates 8+ parameter constructors
+- **⚙️ Configuration Management**: Environment-specific with real-time validation  
+- **🔍 Service Monitoring**: Real-time health checks and dependency graphs
+- **🛡️ Safe Migration**: Dual configuration support with comprehensive testing
 
 ## 🔐 Security & Privacy
 

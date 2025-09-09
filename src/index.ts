@@ -11,22 +11,47 @@ import { SessionService } from './services/session';
 import { TelegramService } from './services/telegram';
 import { DocumentService } from './services/document';
 import { AIService } from './services/ai';
+import { EnhancedAIService } from './services/enhanced-ai';
 import { LoggingService } from './services/logging';
 import { AdminAuthService } from './services/admin-auth';
+import { EnvironmentConfigurationService } from './config/environment';
+import { createServiceContainer } from './container/service-container';
 
 export interface Env {
-  // Telegram Configuration
-  TELEGRAM_BOT_TOKEN: string;
-  WEBHOOK_SECRET: string;
+  // 🔄 EXISTING Telegram Configuration (for migration compatibility)
+  TELEGRAM_BOT_TOKEN?: string;
+  WEBHOOK_SECRET?: string;
 
-  // OpenAI Configuration
+  // 🆕 NEW Environment-Specific Telegram Configuration
+  BOT_TOKEN_DEVELOPMENT?: string;
+  BOT_TOKEN_STAGING?: string;
+  BOT_TOKEN_PRODUCTION?: string;
+  BOT_USERNAME_DEVELOPMENT?: string;
+  BOT_USERNAME_STAGING?: string;
+  BOT_USERNAME_PRODUCTION?: string;
+  WEBHOOK_SECRET_DEVELOPMENT?: string;
+  WEBHOOK_SECRET_STAGING?: string;
+  WEBHOOK_SECRET_PRODUCTION?: string;
+
+  // 🆕 NEW Infrastructure Configuration
+  WORKER_NAME_DEVELOPMENT?: string;
+  WORKER_NAME_STAGING?: string;
+  WORKER_NAME_PRODUCTION?: string;
+  WORKER_URL_DEVELOPMENT?: string;
+  WORKER_URL_STAGING?: string;
+  WORKER_URL_PRODUCTION?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+
+  // 🔄 EXISTING OpenAI Configuration
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   OPENAI_ORG_ID?: string;
 
-  // Admin Configuration
+  // 🔄 EXISTING + NEW Admin Configuration
   ADMIN_PASSWORD?: string;
   ADMIN_PASSWORD_STAGING?: string;
+  ADMIN_PASSWORD_DEVELOPMENT?: string;
+  ADMIN_PASSWORD_PRODUCTION?: string;
 
   // Cloudflare Workers Configuration
   SESSIONS: KVNamespace;
@@ -56,113 +81,52 @@ export interface Env {
   PARALLEL_AI_REQUESTS?: string;
 }
 
-/**
- * Load application configuration
- */
-async function loadConfig(_environment: string): Promise<any> {
-  try {
-    // Import config.json - in a real scenario, you might fetch this from KV or use it directly
-    const config = {
-      "project": {
-        "name": "telegram-resume-matcher",
-        "version": "1.0.0",
-        "description": "AI-powered Telegram bot for resume-job matching analysis"
-      },
-      "admin": {
-        "development": {
-          "authRequired": false,
-          "openAccess": true,
-          "sessionTimeoutHours": 24,
-          "maxLoginAttempts": 5,
-          "loginCooldownMinutes": 5
-        },
-        "staging": {
-          "authRequired": true,
-          "openAccess": false,
-          "sessionTimeoutHours": 24,
-          "maxLoginAttempts": 5,
-          "loginCooldownMinutes": 10
-        },
-        "production": {
-          "authRequired": true,
-          "openAccess": false,
-          "sessionTimeoutHours": 24,
-          "maxLoginAttempts": 3,
-          "loginCooldownMinutes": 15
-        }
-      }
-    };
-    
-    return config;
-  } catch (error) {
-    console.error('Failed to load config:', error);
-    return {};
-  }
-}
+// Configuration now handled by service container
 
 /**
- * Initialize services with environment configuration
+ * Initialize services using dependency injection container
  */
 async function initializeServices(env: Env) {
-  // Get environment and load config
-  const environment = env.ENVIRONMENT || 'development';
-  const config = await loadConfig(environment);
+  console.log('🔧 Initializing services with dependency injection container...');
+  
+  // 🆕 NEW: Create and configure service container
+  const container = await createServiceContainer(env);
+  
+  // Get configuration service for validation and logging
+  const configService = await container.get<EnvironmentConfigurationService>('config');
+  
+  // 🆕 NEW: Validate configuration and log results
+  const validationResults = configService.validate();
+  if (validationResults.length > 0) {
+    console.log('⚠️ Configuration validation results:', 
+      JSON.stringify(validationResults, null, 2));
+  }
 
-  // Parse configuration
-  const sessionTimeoutHours = parseInt(env.SESSION_TIMEOUT_HOURS || '24');
-  const maxFileSizeMB = parseInt(env.MAX_FILE_SIZE_MB || '10');
-  const rateLimitPerMinute = parseInt(env.RATE_LIMIT_PER_MINUTE || '10');
-  const maxTokens = parseInt(env.MAX_TOKENS || '1500');
-  const temperature = parseFloat(env.GPT_TEMPERATURE || '0.3');
-  const model = env.OPENAI_MODEL || 'gpt-4';
+  // 🆕 NEW: Log masked configuration for debugging
+  console.log('🔧 Configuration loaded:', 
+    JSON.stringify(configService.getMaskedConfig(), null, 2));
 
-  // Initialize logging service first
-  const loggingService = new LoggingService(env.LOGS_DB);
-  await loggingService.initialize();
+  // Initialize core services (dependencies will be resolved automatically)
+  const sessionService = await container.get<SessionService>('session');
+  const telegramService = await container.get<TelegramService>('telegram');
+  const documentService = await container.get<DocumentService>('document');
+  const aiService = await container.get<AIService>('ai');
+  const enhancedAIService = await container.get<EnhancedAIService>('enhancedAI');
+  const loggingService = await container.get<LoggingService>('logging');
+  const adminAuthService = await container.get<AdminAuthService>('adminAuth');
+  const conversationHandler = await container.get<ConversationHandler>('conversation');
+  const webhookHandler = await container.get<WebhookHandler>('webhook');
 
-  // Initialize admin auth service
-  const adminPassword = environment === 'staging' 
-    ? (env.ADMIN_PASSWORD_STAGING || '12354678')
-    : env.ADMIN_PASSWORD;
-    
-  const adminAuthService = new AdminAuthService(
-    env.SESSIONS,
-    environment,
-    config,
-    adminPassword
-  );
-
-  // Initialize other services
-  const sessionService = new SessionService(env.SESSIONS, sessionTimeoutHours * 3600);
-  const telegramService = new TelegramService(env.TELEGRAM_BOT_TOKEN);
-  const documentService = new DocumentService(maxFileSizeMB);
-  const aiService = new AIService(env.OPENAI_API_KEY, model, maxTokens, temperature);
-
-  // Initialize conversation handler
-  const conversationHandler = new ConversationHandler(
-    sessionService,
-    telegramService,
-    documentService,
-    aiService,
-    loggingService,
-    env.ENVIRONMENT || 'development',
-    adminPassword || 'defaultpassword'
-  );
-
-  // Initialize webhook handler with rate limiting
-  const webhookHandler = WebhookHandler.createWithRateLimit(
-    conversationHandler,
-    env.SESSIONS,
-    env.WEBHOOK_SECRET,
-    rateLimitPerMinute,
-    loggingService
-  );
+  console.log('✅ All services initialized via dependency injection container');
 
   return {
+    container,        // 🆕 NEW: Return container for advanced usage
+    configService,    // 🔄 KEEP: Still needed for endpoints
     sessionService,
     telegramService,
     documentService,
     aiService,
+    enhancedAIService,
     conversationHandler,
     webhookHandler,
     loggingService,
@@ -180,17 +144,107 @@ export default {
       
       // Health check endpoint
       if (url.pathname === '/health') {
+        const services = await initializeServices(env);
+        const configService = services.configService;
+        const validationResults = configService.validate();
+        
         return new Response(JSON.stringify({ 
-          status: 'healthy', 
+          status: validationResults.some(r => r.status === 'error') ? 'unhealthy' : 'healthy',
           timestamp: new Date().toISOString(),
-          environment: env.ENVIRONMENT || 'unknown',
           version: '1.0.0',
-          botTokenPresent: !!env.TELEGRAM_BOT_TOKEN,
-          botTokenLength: env.TELEGRAM_BOT_TOKEN?.length || 0,
-          webhookSecretPresent: !!env.WEBHOOK_SECRET
+          configuration: configService.getMaskedConfig(),
+          validation: validationResults,
+          // 🔄 LEGACY: Keep old fields for compatibility
+          environment: configService.getEnvironment(),
+          botTokenPresent: !!configService.getTelegramConfig().botToken,
+          botTokenLength: configService.getTelegramConfig().botToken?.length || 0,
+          webhookSecretPresent: !!configService.getTelegramConfig().webhookSecret
         }), {
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      // Fix webhook endpoint 
+      if (url.pathname === '/fix-webhook' && request.method === 'POST') {
+        try {
+          const webhookUrl = `${url.origin}/webhook`;
+          
+          // 🔄 UPDATED: Use configuration service for bot token
+          const configService = new EnvironmentConfigurationService(env);
+          const botToken = configService.getTelegramConfig().botToken;
+          
+          // Set webhook using our bot token
+          const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: webhookUrl,
+              allowed_updates: ['message', 'callback_query'],
+              drop_pending_updates: true
+            })
+          });
+          
+          const result = await response.json();
+          
+          // Also get current status
+          const infoResponse = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+          const info = await infoResponse.json();
+          
+          return new Response(JSON.stringify({
+            setWebhookResult: result,
+            currentWebhookInfo: info,
+            expectedUrl: webhookUrl
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
+      // Debug endpoint to test bot functionality
+      if (url.pathname === '/debug-bot' && request.method === 'POST') {
+        try {
+          const services = await initializeServices(env);
+          const configService = services.configService;
+          const config = configService.getConfig();
+          const testChatId = 12345; // Test chat ID
+          
+          // Test the bot token first
+          const botInfo = await fetch(`https://api.telegram.org/bot${config.telegram.botToken}/getMe`);
+          const botResult = await botInfo.json();
+          
+          // Test sending a message
+          const result = await services.telegramService.sendMessage({
+            chat_id: testChatId,
+            text: '🧪 Debug test message from staging bot'
+          });
+          
+          return new Response(JSON.stringify({
+            success: true,
+            botInfo: botResult,
+            messageResult: result,
+            botTokenLength: config.telegram.botToken?.length || 0,
+            environment: config.environment
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       // Telegram webhook endpoint
@@ -216,6 +270,16 @@ export default {
       // Debug test endpoint
       if (url.pathname === '/test-bot' && request.method === 'POST') {
         return await handleTestBot(request, env);
+      }
+
+      // 🆕 NEW: Configuration validation endpoint
+      if (url.pathname === '/validate-environment' && request.method === 'GET') {
+        return await handleValidateEnvironment(env);
+      }
+
+      // 🆕 NEW: Service container status endpoint
+      if (url.pathname === '/services' && request.method === 'GET') {
+        return await handleServiceStatus(env);
       }
 
       // Default response for unhandled routes
@@ -277,8 +341,12 @@ async function handleSetWebhook(request: Request, env: Env): Promise<Response> {
       });
     }
 
-    const telegramService = new TelegramService(env.TELEGRAM_BOT_TOKEN);
-    const success = await telegramService.setWebhook(webhookUrl, env.WEBHOOK_SECRET);
+    // 🔄 UPDATED: Use configuration service  
+    const configService = new EnvironmentConfigurationService(env);
+    const config = configService.getConfig();
+    
+    const telegramService = new TelegramService(config.telegram.botToken);
+    const success = await telegramService.setWebhook(webhookUrl, config.telegram.webhookSecret || undefined);
 
     return new Response(JSON.stringify({
       success,
@@ -304,7 +372,11 @@ async function handleSetWebhook(request: Request, env: Env): Promise<Response> {
  */
 async function handleDeleteWebhook(env: Env): Promise<Response> {
   try {
-    const telegramService = new TelegramService(env.TELEGRAM_BOT_TOKEN);
+    // 🔄 UPDATED: Use configuration service
+    const configService = new EnvironmentConfigurationService(env);
+    const config = configService.getConfig();
+    
+    const telegramService = new TelegramService(config.telegram.botToken);
     const success = await telegramService.deleteWebhook();
 
     return new Response(JSON.stringify({
@@ -454,3 +526,204 @@ async function handleTestBot(request: Request, env: Env): Promise<Response> {
     });
   }
 }
+
+/**
+ * 🆕 NEW: Handle environment validation endpoint
+ */
+async function handleValidateEnvironment(env: Env): Promise<Response> {
+  try {
+    console.log('🔍 Starting environment validation...');
+    
+    // Initialize configuration service
+    const configService = new EnvironmentConfigurationService(env);
+    const config = configService.getConfig();
+    
+    // Perform validation
+    const validationResults = configService.validate();
+    const maskedConfig = configService.getMaskedConfig();
+    
+    // Test Telegram connectivity
+    let telegramTest = null;
+    try {
+      const telegramResponse = await fetch(
+        `https://api.telegram.org/bot${config.telegram.botToken}/getMe`
+      );
+      telegramTest = {
+        status: telegramResponse.ok ? 'pass' : 'fail',
+        message: telegramResponse.ok ? 'Bot token is valid' : 'Bot token validation failed',
+        details: telegramResponse.ok ? await telegramResponse.json() : await telegramResponse.text()
+      };
+    } catch (error) {
+      telegramTest = {
+        status: 'fail',
+        message: 'Telegram API connection failed',
+        details: String(error)
+      };
+    }
+    
+    // Test OpenAI connectivity (if key present)
+    let openaiTest = null;
+    if (config.services.openaiApiKey) {
+      try {
+        const openaiResponse = await fetch('https://api.openai.com/v1/models', {
+          headers: {
+            'Authorization': `Bearer ${config.services.openaiApiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        openaiTest = {
+          status: openaiResponse.ok ? 'pass' : 'fail',
+          message: openaiResponse.ok ? 'OpenAI API key is valid' : 'OpenAI API key validation failed',
+          details: openaiResponse.ok ? 'Connection successful' : await openaiResponse.text()
+        };
+      } catch (error) {
+        openaiTest = {
+          status: 'fail',
+          message: 'OpenAI API connection failed',
+          details: String(error)
+        };
+      }
+    } else {
+      openaiTest = {
+        status: 'warning',
+        message: 'OpenAI API key not provided',
+        details: 'Set OPENAI_API_KEY to enable AI features'
+      };
+    }
+    
+    // Test webhook URL accessibility
+    let webhookTest = null;
+    try {
+      const webhookResponse = await fetch(config.telegram.webhookUrl);
+      webhookTest = {
+        status: 'pass',
+        message: 'Webhook URL is accessible',
+        details: `Status: ${webhookResponse.status}`
+      };
+    } catch (error) {
+      webhookTest = {
+        status: 'warning',
+        message: 'Webhook URL accessibility test failed',
+        details: String(error)
+      };
+    }
+    
+    // Calculate overall status
+    const hasErrors = validationResults.some(r => r.status === 'error') || 
+                     telegramTest?.status === 'fail' || 
+                     openaiTest?.status === 'fail';
+    
+    const overallStatus = hasErrors ? 'fail' : 'pass';
+    
+    const report = {
+      timestamp: new Date().toISOString(),
+      environment: config.environment,
+      overallStatus,
+      configuration: maskedConfig,
+      validation: {
+        configValidation: validationResults,
+        telegramConnectivity: telegramTest,
+        openaiConnectivity: openaiTest,
+        webhookAccessibility: webhookTest
+      },
+      recommendations: [
+        ...(telegramTest?.status === 'fail' ? ['Fix Telegram bot token configuration'] : []),
+        ...(openaiTest?.status === 'fail' ? ['Fix OpenAI API key configuration'] : []),
+        ...(validationResults.filter(r => r.status === 'error').map(r => r.suggestion || r.message)),
+        ...(config.environment === 'production' && !config.telegram.webhookSecret ? ['Set webhook secret for production'] : [])
+      ]
+    };
+    
+    console.log('✅ Environment validation completed:', overallStatus);
+    
+    return new Response(JSON.stringify(report, null, 2), {
+      status: hasErrors ? 500 : 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Environment validation failed:', error);
+    
+    return new Response(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      overallStatus: 'fail',
+      error: 'Validation process failed',
+      message: String(error)
+    }, null, 2), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+/**
+ * 🆕 NEW: Handle service container status endpoint
+ */
+async function handleServiceStatus(env: Env): Promise<Response> {
+  try {
+    console.log('📊 Getting service container status...');
+    
+    // Initialize service container
+    const services = await initializeServices(env);
+    const container = services.container;
+    
+    // Get service information
+    const serviceInfo = container.getServiceInfo();
+    
+    // Get health check results for initialized services
+    const healthResults = await container.healthCheck();
+    
+    // Combine service info with health results
+    const servicesStatus = serviceInfo.map(info => {
+      const health = healthResults.find(h => h.name === info.name);
+      return {
+        ...info,
+        healthStatus: health
+      };
+    });
+    
+    // Calculate overall status
+    const unhealthyServices = healthResults.filter(h => h.status === 'unhealthy');
+    const overallStatus = unhealthyServices.length === 0 ? 'healthy' : 'unhealthy';
+    
+    const report = {
+      timestamp: new Date().toISOString(),
+      overallStatus,
+      summary: {
+        totalServices: serviceInfo.length,
+        initializedServices: serviceInfo.filter(s => s.initialized).length,
+        healthyServices: healthResults.filter(h => h.status === 'healthy').length,
+        unhealthyServices: unhealthyServices.length,
+      },
+      services: servicesStatus,
+      containerInfo: {
+        registeredServices: container.getServiceNames(),
+        dependencyGraph: serviceInfo.reduce((graph, service) => {
+          graph[service.name] = service.dependencies;
+          return graph;
+        }, {} as Record<string, string[]>)
+      }
+    };
+    
+    console.log(`✅ Service container status: ${overallStatus}`);
+    
+    return new Response(JSON.stringify(report, null, 2), {
+      status: overallStatus === 'healthy' ? 200 : 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Service status check failed:', error);
+    
+    return new Response(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      overallStatus: 'error',
+      error: 'Service status check failed',
+      message: String(error)
+    }, null, 2), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+

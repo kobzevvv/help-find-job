@@ -44,6 +44,16 @@ database_id = "f393809f-9a96-4fab-9e61-695b3331f962"
 [env.development.vars]
 ENVIRONMENT = "development"
 
+# 🆕 NEW: Environment-specific configuration (development values)
+BOT_USERNAME_DEVELOPMENT = "help_find_job_dev_bot"
+WORKER_NAME_DEVELOPMENT = "help-with-job-search-telegram-bot-dev"
+WORKER_URL_DEVELOPMENT = "https://help-with-job-search-telegram-bot-dev.vova-likes-smoothy.workers.dev"
+DEBUG_LOGGING_DEVELOPMENT = "true"
+
+# 🔒 BOT_TOKEN_DEVELOPMENT will be a secret (use wrangler secret put)
+# 🔒 WEBHOOK_SECRET_DEVELOPMENT can be a secret (use wrangler secret put)
+# 🔒 ADMIN_PASSWORD_DEVELOPMENT can be "devpassword" (use wrangler secret put)
+
 # =============================================================================
 # Staging Environment  
 # =============================================================================
@@ -75,6 +85,15 @@ database_id = "163e1614-01a5-46a9-b718-674fc8a34f85"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 
+# 🆕 NEW: Environment-specific configuration (public staging values)
+BOT_TOKEN_STAGING = "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
+BOT_USERNAME_STAGING = "job_search_help_staging_bot"
+WORKER_NAME_STAGING = "help-with-job-search-telegram-bot-staging"
+WORKER_URL_STAGING = "https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
+DEBUG_LOGGING_STAGING = "true"
+
+# 🔒 WEBHOOK_SECRET_STAGING intentionally NOT set (staging doesn't need webhook validation)
+
 # =============================================================================
 # Production Environment
 # =============================================================================
@@ -105,6 +124,15 @@ database_id = "50f03a22-7301-401f-bde5-2c34b07975bc"
 # Environment identifier
 [env.production.vars]
 ENVIRONMENT = "production"
+
+# 🆕 NEW: Environment-specific configuration (public production values)
+BOT_USERNAME_PRODUCTION = "job_search_help_bot"
+WORKER_NAME_PRODUCTION = "help-with-job-search-telegram-bot"
+WORKER_URL_PRODUCTION = "https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev"
+DEBUG_LOGGING_PRODUCTION = "false"
+
+# 🔒 BOT_TOKEN_PRODUCTION will remain a secret (use wrangler secret put)
+# 🔒 WEBHOOK_SECRET_PRODUCTION will remain a secret (use wrangler secret put)
 
 # =============================================================================
 # Security Configuration
