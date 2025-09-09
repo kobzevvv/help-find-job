@@ -26,7 +26,6 @@ export interface ServiceFactory<T> {
   dependencies: string[];
 }
 
-
 export interface AppConfig {
   admin: {
     [environment: string]: {
@@ -185,7 +184,13 @@ export class ServiceContainer {
         let health: ServiceHealth;
 
         // Check if service has a health check method
-        if (service && typeof service === 'object' && service !== null && 'healthCheck' in service && typeof (service as ServiceLifecycle).healthCheck === 'function') {
+        if (
+          service &&
+          typeof service === 'object' &&
+          service !== null &&
+          'healthCheck' in service &&
+          typeof (service as ServiceLifecycle).healthCheck === 'function'
+        ) {
           health = await (service as ServiceLifecycle).healthCheck!();
         } else {
           // Default health check - just check if service is initialized
@@ -223,7 +228,13 @@ export class ServiceContainer {
 
       try {
         // Check if service has a shutdown method
-        if (service && typeof service === 'object' && service !== null && 'shutdown' in service && typeof (service as ServiceLifecycle).shutdown === 'function') {
+        if (
+          service &&
+          typeof service === 'object' &&
+          service !== null &&
+          'shutdown' in service &&
+          typeof (service as ServiceLifecycle).shutdown === 'function'
+        ) {
           await (service as ServiceLifecycle).shutdown!();
           console.log(`✅ Service shutdown: ${serviceName}`);
         }
@@ -357,7 +368,9 @@ export async function createServiceContainer(
       const storage =
         await container.get<CloudflareRequestStorage>('requestStorage');
       if (!env.AI) {
-        throw new Error('Cloudflare AI service is not available in environment');
+        throw new Error(
+          'Cloudflare AI service is not available in environment'
+        );
       }
       return new DocumentProcessingPipeline(env.AI, storage);
     },

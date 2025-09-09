@@ -195,7 +195,9 @@ export default {
           console.log('🧪 Testing document processing pipeline...');
 
           const services = await initializeServices(env);
-          const pipeline = await services.container.get('documentPipeline') as DocumentProcessingPipeline;
+          const pipeline = (await services.container.get(
+            'documentPipeline'
+          )) as DocumentProcessingPipeline;
 
           if (!pipeline) {
             return new Response(

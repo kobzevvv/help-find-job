@@ -22,10 +22,7 @@ export class DocumentProcessingPipeline {
   private ai: CloudflareAIService;
   private storage: DocumentStorage;
 
-  constructor(
-    ai: CloudflareAIService,
-    storage: DocumentStorage
-  ) {
+  constructor(ai: CloudflareAIService, storage: DocumentStorage) {
     this.ai = ai;
     this.storage = storage;
   }

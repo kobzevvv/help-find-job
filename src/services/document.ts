@@ -11,10 +11,7 @@ export class DocumentService {
   private maxFileSizeMB: number;
   private ai?: CloudflareAIService;
 
-  constructor(
-    maxFileSizeMB: number = 10,
-    ai?: CloudflareAIService
-  ) {
+  constructor(maxFileSizeMB: number = 10, ai?: CloudflareAIService) {
     this.maxFileSizeMB = maxFileSizeMB;
     if (ai !== undefined) {
       this.ai = ai;
