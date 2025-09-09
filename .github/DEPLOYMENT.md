@@ -72,6 +72,22 @@ If you see: `This request has been automatically failed because it uses a deprec
 
 **This has been fixed** - all workflows now use current GitHub Actions versions (v4).
 
+### GitHub Deployment Creation Failure
+If you see: `❌ ARCHITECTURAL ISSUE: GitHub deployment creation failed`
+
+**This has been fixed** - The deployment now uses a **robust fallback strategy**:
+
+1. **First:** Attempts to create GitHub deployment record for full tracking
+2. **If that fails:** Continues with Cloudflare deployment anyway 
+3. **Result:** Your bot gets deployed even if GitHub API has issues
+
+**Common causes:**
+- Branch protection rules requiring status checks
+- Repository permission limitations
+- GitHub API rate limiting
+
+**Impact:** Cloudflare deployment succeeds, but GitHub deployment tracking may be disabled.
+
 ### Production Deployment Not Running Automatically
 This is **by design**. Production deployments require manual approval for safety.
 

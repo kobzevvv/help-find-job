@@ -234,6 +234,31 @@ cache-key: ${{ steps.build-cache-key.outputs.cache-key }}     # ✅ Correct refe
 
 **Security Impact:** Prevents unauthorized webhook requests to bot endpoints.
 
+### GitHub Deployment Creation Fallback
+**Problem:** GitHub deployment creation API failing due to branch protection rules, repository permissions, or API rate limiting.
+
+**Solution:** **Robust Fallback Strategy**
+- Deployment creation step uses `continue-on-error: true`
+- If GitHub deployment tracking fails, Cloudflare deployment proceeds anyway
+- All deployment status updates are conditional on successful deployment creation
+
+**Architecture Benefits:**
+```
+🔄 BEFORE: GitHub API issue → Complete deployment failure
+✅ AFTER:  GitHub API issue → Cloudflare deployment succeeds (tracking disabled)
+```
+
+**Implementation:**
+```yaml
+- name: Create deployment record
+  continue-on-error: true  # Don't fail entire job
+  
+- name: Set deployment status
+  if: steps.deployment.outputs.deployment-id != ''  # Only if tracking enabled
+```
+
+**User Impact:** Production deployments are no longer blocked by GitHub API issues while maintaining deployment safety.
+
 ## Emergency Procedures
 
 ### Rollback Production
