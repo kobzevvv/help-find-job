@@ -10,6 +10,7 @@ import { AIService } from '../services/ai';
 import { EnhancedAIService } from '../services/enhanced-ai';
 import { LoggingService } from '../services/logging';
 import { EnhancedAnalysis } from '../types/session';
+import { getStrings } from '../i18n';
 
 export class ConversationHandler {
   private sessionService: SessionService;
@@ -143,7 +144,7 @@ export class ConversationHandler {
           await this.sessionService.updateState(userId, 'waiting_job_post');
           await this.telegramService.sendMessage({
             chat_id: chatId,
-            text: '✅ Спасибо! Я получил ваше резюме. Теперь пришлите текст вакансии (можно в одном или нескольких сообщениях).',
+            text: getStrings().bot.waitingJobPostAfterDone,
           });
         } else {
           await this.handleResumeText(text, chatId, userId);
@@ -177,7 +178,7 @@ export class ConversationHandler {
     if (currentState !== 'waiting_resume' && currentState !== 'waiting_job_post') {
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Сейчас я не жду документ. Пожалуйста, начните с команды /resume_and_job_post_match',
+        text: getStrings().bot.notExpectingDocument,
       });
       return;
     }
@@ -310,7 +311,7 @@ export class ConversationHandler {
     await this.sessionService.updateState(userId, 'waiting_resume');
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '📄 Я помогу проанализировать, насколько ваше резюме соответствует вакансии!\n\nПожалуйста, отправьте своё резюме. Можно:\n• Прикрепить файл или вставить текст в нескольких сообщениях\n\nКогда завершите отправку всех частей резюме, нажмите кнопку ниже «Готово с резюме» или напишите: \n\n✅ готово\n\nПосле этого я попрошу отправить текст вакансии.',
+      text: getStrings().bot.startMatchIntro,
     });
   }
 
