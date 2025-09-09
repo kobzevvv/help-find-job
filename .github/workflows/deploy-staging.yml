@@ -1,4 +1,4 @@
-name: Deploy to Staging (v2)
+name: Deploy to Staging
 
 # Advanced staging deployment with artifact inheritance
 on:
