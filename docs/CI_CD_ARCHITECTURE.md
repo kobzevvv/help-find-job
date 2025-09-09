@@ -147,10 +147,11 @@ Key changes:
 
 ### Activation Steps
 1. Test locally: `npm run test:all && npm run build:ci`
-2. Run migration script: `./scripts/migrate-to-ci-v2.sh`
-3. Or manually:
-   - Rename old workflows to `-legacy` suffix
-   - Rename `*-v2.yml` files to remove `-v2` suffix
+2. Run validation script: `./scripts/migrate-to-ci-refactor.sh`
+3. The refactored workflows are already active:
+   - `deploy-staging.yml` - New staging deployment
+   - `deploy-production.yml` - New production deployment  
+   - Legacy workflows preserved as `*-legacy.yml`
 
 ### Benefits
 - Fixes build order issue (tests after compilation)
@@ -178,6 +179,6 @@ Use the `skip_staging_validation` option in production deployment workflow to by
 ## Files
 
 - Quality Gates: `.github/workflows/quality-gates.yml`
-- Staging v2: `.github/workflows/deploy-staging-v2.yml`
-- Production v2: `.github/workflows/deploy-production-v2.yml`
+- Staging Deployment: `.github/workflows/deploy-staging.yml`
+- Production Deployment: `.github/workflows/deploy-production.yml`
 - Test Configs: `jest.config.*.js`

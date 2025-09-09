@@ -40,6 +40,10 @@ binding = "LOGS_DB"
 database_name = "telegram-bot-logs"
 database_id = "f393809f-9a96-4fab-9e61-695b3331f962"
 
+# AI binding for document processing
+[env.development.ai]
+binding = "AI"
+
 # Environment identifier
 [env.development.vars]
 ENVIRONMENT = "development"
@@ -81,6 +85,10 @@ binding = "LOGS_DB"
 database_name = "telegram-bot-logs-staging"
 database_id = "163e1614-01a5-46a9-b718-674fc8a34f85"
 
+# AI binding for document processing
+[env.staging.ai]
+binding = "AI"
+
 # Environment identifier
 [env.staging.vars]
 ENVIRONMENT = "staging"
@@ -120,6 +128,10 @@ id = "2e49f98ca4a94852b51c2f6528f8677f"
 binding = "LOGS_DB"
 database_name = "telegram-bot-logs-production"
 database_id = "50f03a22-7301-401f-bde5-2c34b07975bc"
+
+# AI binding for document processing
+[env.production.ai]
+binding = "AI"
 
 # Environment identifier
 [env.production.vars]
