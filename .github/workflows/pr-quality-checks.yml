@@ -31,8 +31,11 @@ jobs:
       - name: Lint
         run: npm run lint || true
 
-      - name: Unit & Integration Tests
-        run: npm run test:unit && npm run test:integration
+      - name: Unit Tests
+        run: npm run test:unit
+
+      - name: Integration Tests  
+        run: npm run test:integration
 
       - name: Build (compile TS)
         run: npm run build:ci

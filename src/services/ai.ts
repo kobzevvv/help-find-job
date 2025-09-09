@@ -2,7 +2,11 @@
  * AI analysis service using OpenAI GPT
  */
 
-import { AnalysisResult, CompleteAnalysis, ProcessedDocument } from '../types/session';
+import {
+  AnalysisResult,
+  CompleteAnalysis,
+  ProcessedDocument,
+} from '../types/session';
 
 export class AIService {
   private apiKey: string;
@@ -25,14 +29,19 @@ export class AIService {
   /**
    * Analyze resume against job posting
    */
-  async analyzeMatch(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<CompleteAnalysis | null> {
+  async analyzeMatch(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<CompleteAnalysis | null> {
     try {
       // Run all three analyses in parallel for speed
-      const [generalResult, skillsResult, experienceResult] = await Promise.all([
-        this.analyzeGeneral(resume, jobPost),
-        this.analyzeSkills(resume, jobPost),
-        this.analyzeExperience(resume, jobPost),
-      ]);
+      const [generalResult, skillsResult, experienceResult] = await Promise.all(
+        [
+          this.analyzeGeneral(resume, jobPost),
+          this.analyzeSkills(resume, jobPost),
+          this.analyzeExperience(resume, jobPost),
+        ]
+      );
 
       if (!generalResult || !skillsResult || !experienceResult) {
         return null;
@@ -44,7 +53,12 @@ export class AIService {
       );
 
       // Generate summary
-      const summary = this.generateSummary(overallScore, generalResult, skillsResult, experienceResult);
+      const summary = this.generateSummary(
+        overallScore,
+        generalResult,
+        skillsResult,
+        experienceResult
+      );
 
       return {
         overallScore,
@@ -54,7 +68,6 @@ export class AIService {
         summary,
         processedAt: new Date().toISOString(),
       };
-
     } catch (error) {
       console.error('Error in AI analysis:', error);
       return null;
@@ -64,7 +77,10 @@ export class AIService {
   /**
    * Analyze general document alignment
    */
-  private async analyzeGeneral(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<AnalysisResult | null> {
+  private async analyzeGeneral(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<AnalysisResult | null> {
     const prompt = `
 Analyze how well this resume's GENERAL formatting and structure aligns with this job posting.
 
@@ -96,7 +112,10 @@ Provide your analysis in this EXACT JSON format:
   /**
    * Analyze skills match
    */
-  private async analyzeSkills(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<AnalysisResult | null> {
+  private async analyzeSkills(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<AnalysisResult | null> {
     const prompt = `
 Analyze how well the SKILLS in this resume match the job requirements.
 
@@ -128,7 +147,10 @@ Provide your analysis in this EXACT JSON format:
   /**
    * Analyze experience match
    */
-  private async analyzeExperience(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<AnalysisResult | null> {
+  private async analyzeExperience(
+    resume: ProcessedDocument,
+    jobPost: ProcessedDocument
+  ): Promise<AnalysisResult | null> {
     const prompt = `
 Analyze how well the WORK EXPERIENCE in this resume matches the job requirements.
 
@@ -160,37 +182,48 @@ Provide your analysis in this EXACT JSON format:
   /**
    * Call OpenAI GPT API
    */
-  private async callGPT(prompt: string, category: string): Promise<AnalysisResult | null> {
+  private async callGPT(
+    prompt: string,
+    category: string
+  ): Promise<AnalysisResult | null> {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert resume and job matching analyst. Always respond with valid JSON only.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: this.maxTokens,
-          temperature: this.temperature,
-        }),
-      });
+      const response = await fetch(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You are an expert resume and job matching analyst. Always respond with valid JSON only.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            max_tokens: this.maxTokens,
+            temperature: this.temperature,
+          }),
+        }
+      );
 
       if (!response.ok) {
-        console.error('OpenAI API error:', response.status, await response.text());
+        console.error(
+          'OpenAI API error:',
+          response.status,
+          await response.text()
+        );
         return null;
       }
 
-      const data = await response.json() as any;
+      const data = (await response.json()) as any;
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {
@@ -200,7 +233,7 @@ Provide your analysis in this EXACT JSON format:
 
       // Parse JSON response
       const result = JSON.parse(content);
-      
+
       return {
         category: category as 'general' | 'skills' | 'experience',
         score: result.score || 0,
@@ -208,7 +241,6 @@ Provide your analysis in this EXACT JSON format:
         improvements: result.improvements || [],
         recommendations: result.recommendations || [],
       };
-
     } catch (error) {
       console.error(`Error in ${category} analysis:`, error);
       return null;
@@ -227,13 +259,17 @@ Provide your analysis in this EXACT JSON format:
     let summary = '';
 
     if (overallScore >= 80) {
-      summary = '🎉 Excellent match! Your resume aligns very well with this job posting.';
+      summary =
+        '🎉 Excellent match! Your resume aligns very well with this job posting.';
     } else if (overallScore >= 60) {
-      summary = '👍 Good match! Your resume shows strong potential for this role.';
+      summary =
+        '👍 Good match! Your resume shows strong potential for this role.';
     } else if (overallScore >= 40) {
-      summary = '⚠️ Moderate match. Some areas need improvement to better align with this role.';
+      summary =
+        '⚠️ Moderate match. Some areas need improvement to better align with this role.';
     } else {
-      summary = '❌ Low match. Significant improvements needed to align with this job posting.';
+      summary =
+        '❌ Low match. Significant improvements needed to align with this job posting.';
     }
 
     // Add specific insights
