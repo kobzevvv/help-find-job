@@ -1,4 +1,4 @@
-name: Deploy to Production (v2)
+name: Deploy to Production
 
 # Advanced production deployment with comprehensive safeguards
 on:
