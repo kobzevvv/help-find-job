@@ -57,11 +57,11 @@ flowchart TD
 ```
 .github/workflows/
 ├── quality-gates.yml           # NEW: Quality validation workflow
-├── deploy-staging-v2.yml       # NEW: Staging deployment with caching
-├── deploy-production-v2.yml    # NEW: Production deployment with safeguards
+├── deploy-staging.yml          # REFACTORED: Staging deployment with caching
+├── deploy-production.yml       # REFACTORED: Production deployment with safeguards
 ├── pr-quality-checks.yml       # UPDATED: Streamlined PR checks
-├── deploy-staging.yml          # LEGACY: Will be replaced
-└── deploy-production.yml       # LEGACY: Will be replaced
+├── deploy-staging-legacy.yml   # BACKUP: Previous staging workflow
+└── deploy-production-legacy.yml # BACKUP: Previous production workflow
 
 jest.config.unit.js             # Unit test configuration
 jest.config.integration.js      # Integration test configuration  
@@ -111,7 +111,7 @@ tests/setup/
 - `build-cache-key`: For artifact reuse
 - `build-success`: Boolean success indicator
 
-### Staging Deployment v2 (`deploy-staging-v2.yml`)
+### Staging Deployment (`deploy-staging.yml`)
 
 **Triggers:**
 - Pushes to main branch
@@ -124,7 +124,7 @@ tests/setup/
 4. Validation & Testing (health checks, smoke tests, performance validation)
 5. Post-Deployment (create tracking issue, update status, mark ready for production)
 
-### Production Deployment v2 (`deploy-production-v2.yml`)
+### Production Deployment (`deploy-production.yml`)
 
 **Triggers:**
 - Manual dispatch only

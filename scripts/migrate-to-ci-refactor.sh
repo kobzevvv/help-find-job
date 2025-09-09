@@ -27,8 +27,8 @@ echo ""
 # Validate new workflows exist
 NEW_WORKFLOWS=(
     "quality-gates.yml"
-    "deploy-staging-v2.yml"
-    "deploy-production-v2.yml"
+    "deploy-staging.yml"
+    "deploy-production.yml"
 )
 
 echo "🔍 Validating new workflow files..."
@@ -135,12 +135,12 @@ echo "💾 Creating backups of old workflows..."
 BACKUP_DIR="$WORKFLOWS_DIR/backup-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"
 
-OLD_WORKFLOWS=(
-    "deploy-staging.yml"
-    "deploy-production.yml"
+LEGACY_WORKFLOWS=(
+    "deploy-staging-legacy.yml"
+    "deploy-production-legacy.yml"
 )
 
-for workflow in "${OLD_WORKFLOWS[@]}"; do
+for workflow in "${LEGACY_WORKFLOWS[@]}"; do
     if [ -f "$WORKFLOWS_DIR/$workflow" ]; then
         cp "$WORKFLOWS_DIR/$workflow" "$BACKUP_DIR/"
         echo "📄 Backed up: $workflow"
@@ -152,45 +152,47 @@ echo "📁 Backup directory: $BACKUP_DIR"
 echo ""
 
 # Ask for confirmation before activation
-echo "🤔 Ready to activate CI/CD Architecture v2?"
+echo "Ready to validate CI/CD architecture?"
 echo ""
-echo "This will:"
-echo "  ✅ Activate the new quality gates workflow"
-echo "  ✅ Activate advanced staging deployment (v2)"
-echo "  ✅ Activate advanced production deployment (v2)"
-echo "  ✅ Preserve old workflows as backups"
+echo "This will validate:"
+echo "  ✅ Quality gates workflow is ready"
+echo "  ✅ Refactored staging deployment is active"
+echo "  ✅ Refactored production deployment is active"
+echo "  ✅ Legacy workflows are preserved as backups"
 echo ""
-read -p "Continue with migration? (y/N): " -n 1 -r
+read -p "Continue with validation? (y/N): " -n 1 -r
 echo ""
 
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "❌ Migration cancelled by user"
+    echo "❌ Validation cancelled by user"
     echo "💡 You can run this script again when ready"
     exit 0
 fi
 
 echo ""
-echo "🚀 Activating CI/CD Architecture v2..."
+echo "🔍 Validating CI/CD Architecture..."
 
-# Activate new workflows by renaming
-if [ -f "$WORKFLOWS_DIR/deploy-staging.yml" ]; then
-    mv "$WORKFLOWS_DIR/deploy-staging.yml" "$WORKFLOWS_DIR/deploy-staging-legacy.yml"
-    echo "📄 Renamed: deploy-staging.yml → deploy-staging-legacy.yml"
+# Validate that new workflows are in place
+if [ ! -f "$WORKFLOWS_DIR/deploy-staging.yml" ]; then
+    echo "❌ deploy-staging.yml not found"
+    exit 1
+else
+    echo "✅ Staging deployment workflow: Active"
 fi
 
-if [ -f "$WORKFLOWS_DIR/deploy-staging-v2.yml" ]; then
-    mv "$WORKFLOWS_DIR/deploy-staging-v2.yml" "$WORKFLOWS_DIR/deploy-staging.yml"
-    echo "📄 Activated: deploy-staging-v2.yml → deploy-staging.yml"
+if [ ! -f "$WORKFLOWS_DIR/deploy-production.yml" ]; then
+    echo "❌ deploy-production.yml not found"
+    exit 1
+else
+    echo "✅ Production deployment workflow: Active"
 fi
 
-if [ -f "$WORKFLOWS_DIR/deploy-production.yml" ]; then
-    mv "$WORKFLOWS_DIR/deploy-production.yml" "$WORKFLOWS_DIR/deploy-production-legacy.yml"
-    echo "📄 Renamed: deploy-production.yml → deploy-production-legacy.yml"
+if [ -f "$WORKFLOWS_DIR/deploy-staging-legacy.yml" ]; then
+    echo "✅ Legacy staging workflow: Preserved as backup"
 fi
 
-if [ -f "$WORKFLOWS_DIR/deploy-production-v2.yml" ]; then
-    mv "$WORKFLOWS_DIR/deploy-production-v2.yml" "$WORKFLOWS_DIR/deploy-production.yml"
-    echo "📄 Activated: deploy-production-v2.yml → deploy-production.yml"
+if [ -f "$WORKFLOWS_DIR/deploy-production-legacy.yml" ]; then
+    echo "✅ Legacy production workflow: Preserved as backup"
 fi
 
 echo ""
@@ -199,9 +201,9 @@ echo ""
 echo "Summary:"
 echo "========"
 echo "✅ Quality Gates workflow: Active"
-echo "✅ Staging deployment v2: Active"  
-echo "✅ Production deployment v2: Active"
-echo "✅ Test system: Configured"
+echo "✅ Staging deployment: Refactored and active"  
+echo "✅ Production deployment: Refactored and active"
+echo "✅ Test system: Configured with separate environments"
 echo "✅ Build artifact caching: Enabled"
 echo "✅ Legacy workflows: Backed up"
 echo ""
@@ -209,7 +211,7 @@ echo "Next Steps:"
 echo "==========="
 echo "1. Commit and push changes to trigger new workflows"
 echo "2. Monitor first deployment"
-echo "3. Review documentation: docs/CI_CD_ARCHITECTURE_V2.md"
+echo "3. Review documentation: docs/CI_CD_ARCHITECTURE.md"
 echo "4. Clean up legacy workflows after validation"
 echo ""
 echo "Rollback: git checkout -- .github/workflows/"
