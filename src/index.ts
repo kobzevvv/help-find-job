@@ -48,7 +48,9 @@ export interface Env {
   OPENAI_ORG_ID?: string;
 
   // 🆕 NEW Cloudflare Workers AI Configuration
-  AI?: any;
+  AI?: {
+    run: (model: string, options: unknown) => Promise<unknown>;
+  };
 
   // 🔄 EXISTING + NEW Admin Configuration
   ADMIN_PASSWORD?: string;
@@ -210,7 +212,7 @@ export default {
           }
 
           // Test pipeline health
-          const health = await (pipeline as any).healthCheck();
+          const health = await pipeline.healthCheck();
 
           return new Response(
             JSON.stringify({
@@ -261,10 +263,14 @@ export default {
           }
 
           // Test AI functionality with a simple text generation
-          const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-            prompt: 'Say "Hello from Cloudflare Workers AI!" and confirm you can process text.',
-            max_tokens: 100,
-          });
+          const aiResponse = await env.AI.run(
+            '@cf/meta/llama-3.1-8b-instruct',
+            {
+              prompt:
+                'Say "Hello from Cloudflare Workers AI!" and confirm you can process text.',
+              max_tokens: 100,
+            }
+          );
 
           return new Response(
             JSON.stringify({

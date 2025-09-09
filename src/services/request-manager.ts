@@ -1,11 +1,15 @@
 /**
  * User Request Manager
- * 
+ *
  * Orchestrates the complete lifecycle of user requests for document matching.
  * Coordinates between document pipeline, storage, and AI analysis.
  */
 
-import { UserRequest, DocumentReference, EnhancedAnalysis } from '../types/session';
+import {
+  UserRequest,
+  DocumentReference,
+  EnhancedAnalysis,
+} from '../types/session';
 import { DocumentProcessingPipeline } from './document-pipeline';
 import { RequestStorage } from './request-storage';
 import { EnhancedAIService } from './enhanced-ai';
@@ -47,15 +51,16 @@ export class UserRequestManager {
    * Create a new user request
    */
   async createRequest(
-    userId: number, 
-    chatId: number, 
+    userId: number,
+    chatId: number,
     language?: string
   ): Promise<UserRequest> {
-    
     // Check if user has active request
     const existingRequest = await this.storage.getUserActiveRequest(userId);
     if (existingRequest) {
-      console.log(`User ${userId} already has active request: ${existingRequest.id}`);
+      console.log(
+        `User ${userId} already has active request: ${existingRequest.id}`
+      );
       return existingRequest;
     }
 
@@ -67,14 +72,14 @@ export class UserRequestManager {
       lastActivity: new Date().toISOString(),
       status: 'collecting',
       documentIds: [],
-      language
+      language,
     };
 
     await this.storage.storeRequest(request);
-    
+
     await this.logging.log(
-      'INFO', 
-      'REQUEST_CREATED', 
+      'INFO',
+      'REQUEST_CREATED',
       `New request created for user ${userId}`,
       { requestId: request.id, userId, chatId }
     );
@@ -93,7 +98,6 @@ export class UserRequestManager {
     fileName?: string,
     mimeType?: string
   ): Promise<DocumentReference> {
-
     // Verify request exists and is in collecting state
     const request = await this.storage.getRequest(requestId);
     if (!request) {
@@ -101,13 +105,15 @@ export class UserRequestManager {
     }
 
     if (request.status !== 'collecting') {
-      throw new Error(`Request ${requestId} is not accepting documents (status: ${request.status})`);
+      throw new Error(
+        `Request ${requestId} is not accepting documents (status: ${request.status})`
+      );
     }
 
     // Check if document type already exists
     const existingDocs = await this.pipeline.getRequestDocuments(requestId);
-    const hasType = existingDocs.some(doc => doc.type === documentType);
-    
+    const hasType = existingDocs.some((doc) => doc.type === documentType);
+
     if (hasType) {
       throw new Error(`${documentType} already provided for this request`);
     }
@@ -125,12 +131,12 @@ export class UserRequestManager {
       'INFO',
       'DOCUMENT_ADDED',
       `Document added to request: ${documentType}`,
-      { 
-        requestId, 
-        documentId: document.id, 
-        documentType, 
+      {
+        requestId,
+        documentId: document.id,
+        documentType,
         wordCount: document.wordCount,
-        conversionMethod: document.conversionMethod
+        conversionMethod: document.conversionMethod,
       }
     );
 
@@ -147,7 +153,6 @@ export class UserRequestManager {
     request: UserRequest;
     documents: DocumentReference[];
   } | null> {
-    
     const request = await this.storage.getRequest(requestId);
     if (!request) return null;
 
@@ -191,15 +196,15 @@ export class UserRequestManager {
    */
   private async checkRequestCompletion(requestId: string): Promise<void> {
     const documents = await this.pipeline.getRequestDocuments(requestId);
-    
-    const hasResume = documents.some(doc => doc.type === 'resume');
-    const hasJobPost = documents.some(doc => doc.type === 'job_post');
-    
+
+    const hasResume = documents.some((doc) => doc.type === 'resume');
+    const hasJobPost = documents.some((doc) => doc.type === 'job_post');
+
     if (hasResume && hasJobPost) {
       await this.storage.updateRequestStatus(requestId, 'processing');
-      
+
       // Trigger analysis in background
-      this.processAnalysis(requestId).catch(error => {
+      this.processAnalysis(requestId).catch((error) => {
         console.error(`Analysis failed for request ${requestId}:`, error);
         this.storage.updateRequestStatus(requestId, 'error');
       });
@@ -209,12 +214,14 @@ export class UserRequestManager {
   /**
    * Process AI analysis for completed request
    */
-  private async processAnalysis(requestId: string): Promise<RequestAnalysisResult> {
+  private async processAnalysis(
+    requestId: string
+  ): Promise<RequestAnalysisResult> {
     console.log(`🔄 Starting analysis for request: ${requestId}`);
 
     const documents = await this.pipeline.getRequestDocuments(requestId);
-    const resume = documents.find(doc => doc.type === 'resume');
-    const jobPost = documents.find(doc => doc.type === 'job_post');
+    const resume = documents.find((doc) => doc.type === 'resume');
+    const jobPost = documents.find((doc) => doc.type === 'job_post');
 
     if (!resume || !jobPost) {
       throw new Error(`Missing documents for analysis: requestId=${requestId}`);
@@ -224,14 +231,26 @@ export class UserRequestManager {
       'INFO',
       'ANALYSIS_STARTED',
       'Starting enhanced analysis',
-      { requestId, resumeWords: resume.wordCount, jobPostWords: jobPost.wordCount }
+      {
+        requestId,
+        resumeWords: resume.wordCount,
+        jobPostWords: jobPost.wordCount,
+      }
     );
 
     try {
       // Perform enhanced analysis
       const analysis = await this.aiService.analyzeResumeJobMatch(
-        { text: resume.text, wordCount: resume.wordCount, processedAt: resume.processedAt },
-        { text: jobPost.text, wordCount: jobPost.wordCount, processedAt: jobPost.processedAt }
+        {
+          text: resume.text,
+          wordCount: resume.wordCount,
+          processedAt: resume.processedAt,
+        },
+        {
+          text: jobPost.text,
+          wordCount: jobPost.wordCount,
+          processedAt: jobPost.processedAt,
+        }
       );
 
       if (!analysis) {
@@ -245,7 +264,7 @@ export class UserRequestManager {
         request.status = 'completed';
         request.processedAt = new Date().toISOString();
         request.lastActivity = new Date().toISOString();
-        
+
         await this.storage.storeRequest(request);
       }
 
@@ -253,22 +272,24 @@ export class UserRequestManager {
         'INFO',
         'ANALYSIS_COMPLETED',
         'Enhanced analysis completed successfully',
-        { 
-          requestId, 
+        {
+          requestId,
           overallScore: analysis.overallScore,
-          processingTime: Date.now() - new Date(request?.createdAt || 0).getTime()
+          processingTime:
+            Date.now() - new Date(request?.createdAt || 0).getTime(),
         }
       );
 
-      console.log(`✅ Analysis completed for request: ${requestId} (score: ${analysis.overallScore})`);
+      console.log(
+        `✅ Analysis completed for request: ${requestId} (score: ${analysis.overallScore})`
+      );
 
       return {
         request: request!,
         resume,
         jobPost,
-        analysis
+        analysis,
       };
-
     } catch (error) {
       await this.logging.logError(
         'ANALYSIS_FAILED',
@@ -283,15 +304,17 @@ export class UserRequestManager {
   /**
    * Get analysis result if available
    */
-  async getAnalysisResult(requestId: string): Promise<RequestAnalysisResult | null> {
+  async getAnalysisResult(
+    requestId: string
+  ): Promise<RequestAnalysisResult | null> {
     const request = await this.storage.getRequest(requestId);
     if (!request || !request.analysis) {
       return null;
     }
 
     const documents = await this.pipeline.getRequestDocuments(requestId);
-    const resume = documents.find(doc => doc.type === 'resume');
-    const jobPost = documents.find(doc => doc.type === 'job_post');
+    const resume = documents.find((doc) => doc.type === 'resume');
+    const jobPost = documents.find((doc) => doc.type === 'job_post');
 
     if (!resume || !jobPost) {
       console.error(`Missing documents for completed request ${requestId}`);
@@ -302,7 +325,7 @@ export class UserRequestManager {
       request,
       resume,
       jobPost,
-      analysis: request.analysis
+      analysis: request.analysis,
     };
   }
 
@@ -315,8 +338,9 @@ export class UserRequestManager {
    */
   async cleanupOldRequests(olderThanHours: number = 24): Promise<number> {
     try {
-      const cleanedCount = await this.storage.cleanupExpiredRequests(olderThanHours);
-      
+      const cleanedCount =
+        await this.storage.cleanupExpiredRequests(olderThanHours);
+
       if (cleanedCount > 0) {
         await this.logging.log(
           'INFO',
@@ -324,7 +348,7 @@ export class UserRequestManager {
           `Cleaned up ${cleanedCount} expired requests`,
           { cleanedCount, olderThanHours }
         );
-        
+
         console.log(`🧹 Cleaned up ${cleanedCount} expired requests`);
       }
 
@@ -335,7 +359,7 @@ export class UserRequestManager {
         'Failed to clean up expired requests',
         error instanceof Error ? error : new Error(String(error))
       );
-      
+
       return 0;
     }
   }
@@ -349,22 +373,28 @@ export class UserRequestManager {
   }> {
     try {
       // Get storage statistics if available
-      const storageStats = 'getStatistics' in this.storage && typeof this.storage.getStatistics === 'function'
-        ? await (this.storage as any).getStatistics()
-        : { totalRequests: 0, totalDocuments: 0, activeRequests: 0, completedRequests: 0 };
-      
+      const storageStats =
+        'getStatistics' in this.storage && this.storage.getStatistics
+          ? await this.storage.getStatistics()
+          : {
+              totalRequests: 0,
+              totalDocuments: 0,
+              activeRequests: 0,
+              completedRequests: 0,
+            };
+
       // TODO: Calculate more detailed statistics
       // This would require tracking request processing times
-      
+
       return {
         recentRequests: storageStats.activeRequests || 0,
-        avgProcessingTime: 0 // Placeholder
+        avgProcessingTime: 0, // Placeholder
       };
     } catch (error) {
       console.error('Error getting request manager statistics:', error);
       return {
         recentRequests: 0,
-        avgProcessingTime: 0
+        avgProcessingTime: 0,
       };
     }
   }
@@ -372,7 +402,11 @@ export class UserRequestManager {
   /**
    * Health check
    */
-  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; message: string; details?: any }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    message: string;
+    details?: Record<string, unknown>;
+  }> {
     try {
       // Check pipeline health
       const pipelineHealth = await this.pipeline.healthCheck();
@@ -380,19 +414,22 @@ export class UserRequestManager {
         return {
           status: 'unhealthy',
           message: `Pipeline unhealthy: ${pipelineHealth.message}`,
-          details: { pipeline: pipelineHealth }
+          details: { pipeline: pipelineHealth },
         };
       }
 
       // Check storage health if method exists
-      let storageHealth = { status: 'healthy' as const, message: 'Storage check skipped' };
-      if ('healthCheck' in this.storage && typeof this.storage.healthCheck === 'function') {
-        storageHealth = await (this.storage as any).healthCheck();
+      let storageHealth = {
+        status: 'healthy' as const,
+        message: 'Storage check skipped',
+      };
+      if ('healthCheck' in this.storage && this.storage.healthCheck) {
+        storageHealth = await this.storage.healthCheck();
         if (storageHealth.status !== 'healthy') {
           return {
             status: 'unhealthy',
             message: `Storage unhealthy: ${storageHealth.message}`,
-            details: { storage: storageHealth }
+            details: { storage: storageHealth },
           };
         }
       }
@@ -402,13 +439,13 @@ export class UserRequestManager {
         message: 'Request manager operational',
         details: {
           pipeline: pipelineHealth,
-          storage: storageHealth
-        }
+          storage: storageHealth,
+        },
       };
     } catch (error) {
       return {
         status: 'unhealthy',
-        message: `Request manager health check failed: ${error instanceof Error ? error.message : String(error)}`
+        message: `Request manager health check failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

@@ -1,6 +1,6 @@
 /**
  * Request-Based Storage Service
- * 
+ *
  * Handles storage and retrieval of UserRequest and DocumentReference objects
  * using Cloudflare KV for the request-based architecture.
  */
@@ -11,23 +11,41 @@ import { DocumentStorage } from './document-pipeline';
 export interface RequestStorage {
   storeRequest(request: UserRequest): Promise<void>;
   getRequest(requestId: string): Promise<UserRequest | null>;
-  updateRequestStatus(requestId: string, status: UserRequest['status']): Promise<void>;
+  updateRequestStatus(
+    requestId: string,
+    status: UserRequest['status']
+  ): Promise<void>;
   getUserActiveRequest(userId: number): Promise<UserRequest | null>;
   deleteRequest(requestId: string): Promise<void>;
-  
+
   // Request cleanup
   getExpiredRequests(olderThanHours: number): Promise<string[]>;
   cleanupExpiredRequests(olderThanHours: number): Promise<number>;
+
+  // Optional statistics and health check methods
+  getStatistics?(): Promise<{
+    totalRequests: number;
+    totalDocuments: number;
+    activeRequests: number;
+    completedRequests: number;
+  }>;
+  healthCheck?(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    message: string;
+    details?: Record<string, unknown>;
+  }>;
 }
 
 /**
  * Cloudflare KV implementation for request and document storage
  */
-export class CloudflareRequestStorage implements RequestStorage, DocumentStorage {
+export class CloudflareRequestStorage
+  implements RequestStorage, DocumentStorage
+{
   private requestsKV: KVNamespace;
   private documentsKV: KVNamespace;
   private userRequestIndexKV: KVNamespace; // For finding active user requests
-  
+
   constructor(
     requestsKV: KVNamespace,
     documentsKV: KVNamespace,
@@ -48,7 +66,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   async storeRequest(request: UserRequest): Promise<void> {
     const key = `request:${request.id}`;
     await this.requestsKV.put(key, JSON.stringify(request));
-    
+
     // Index by user for finding active requests
     const userKey = `user:${request.userId}:active`;
     if (request.status === 'collecting' || request.status === 'processing') {
@@ -64,9 +82,9 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   async getRequest(requestId: string): Promise<UserRequest | null> {
     const key = `request:${requestId}`;
     const stored = await this.requestsKV.get(key);
-    
+
     if (!stored) return null;
-    
+
     try {
       return JSON.parse(stored) as UserRequest;
     } catch (error) {
@@ -79,7 +97,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
    * Update request status
    */
   async updateRequestStatus(
-    requestId: string, 
+    requestId: string,
     status: UserRequest['status']
   ): Promise<void> {
     const request = await this.getRequest(requestId);
@@ -89,7 +107,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
 
     request.status = status;
     request.lastActivity = new Date().toISOString();
-    
+
     if (status === 'completed') {
       request.processedAt = new Date().toISOString();
     }
@@ -103,9 +121,9 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   async getUserActiveRequest(userId: number): Promise<UserRequest | null> {
     const userKey = `user:${userId}:active`;
     const requestId = await this.userRequestIndexKV.get(userKey);
-    
+
     if (!requestId) return null;
-    
+
     return await this.getRequest(requestId);
   }
 
@@ -143,7 +161,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
 
     // List all request keys
     const { keys } = await this.requestsKV.list({ prefix: 'request:' });
-    
+
     for (const key of keys) {
       const request = await this.getRequest(key.name.replace('request:', ''));
       if (request && new Date(request.lastActivity) < cutoffTime) {
@@ -159,7 +177,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
    */
   async cleanupExpiredRequests(olderThanHours: number): Promise<number> {
     const expiredIds = await this.getExpiredRequests(olderThanHours);
-    
+
     for (const requestId of expiredIds) {
       await this.deleteRequest(requestId);
     }
@@ -177,7 +195,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   async storeDocument(document: DocumentReference): Promise<void> {
     const key = `document:${document.id}`;
     await this.documentsKV.put(key, JSON.stringify(document));
-    
+
     // Update request document index
     await this.addDocumentToRequest(document.requestId, document.id);
   }
@@ -188,9 +206,9 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   async getDocument(documentId: string): Promise<DocumentReference | null> {
     const key = `document:${documentId}`;
     const stored = await this.documentsKV.get(key);
-    
+
     if (!stored) return null;
-    
+
     try {
       return JSON.parse(stored) as DocumentReference;
     } catch (error) {
@@ -207,7 +225,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
     if (!request) return [];
 
     const documents: DocumentReference[] = [];
-    
+
     for (const docId of request.documentIds) {
       const document = await this.getDocument(docId);
       if (document) {
@@ -240,7 +258,10 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   /**
    * Add document ID to request's document list
    */
-  private async addDocumentToRequest(requestId: string, documentId: string): Promise<void> {
+  private async addDocumentToRequest(
+    requestId: string,
+    documentId: string
+  ): Promise<void> {
     const request = await this.getRequest(requestId);
     if (!request) {
       throw new Error(`Request ${requestId} not found`);
@@ -256,7 +277,10 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   /**
    * Remove document ID from request's document list
    */
-  private async removeDocumentFromRequest(requestId: string, documentId: string): Promise<void> {
+  private async removeDocumentFromRequest(
+    requestId: string,
+    documentId: string
+  ): Promise<void> {
     const request = await this.getRequest(requestId);
     if (!request) return;
 
@@ -275,37 +299,37 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
   /**
    * Health check
    */
-  async healthCheck(): Promise<{ 
-    status: 'healthy' | 'unhealthy'; 
-    message: string; 
-    details?: any 
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    message: string;
+    details?: Record<string, unknown>;
   }> {
     try {
       // Test basic KV operations
       const testKey = `health-check-${Date.now()}`;
       const testData = { timestamp: new Date().toISOString() };
-      
+
       // Test write
       await this.requestsKV.put(testKey, JSON.stringify(testData));
-      
+
       // Test read
       const stored = await this.requestsKV.get(testKey);
       if (!stored) {
         throw new Error('Failed to read test data');
       }
-      
+
       // Test delete
       await this.requestsKV.delete(testKey);
-      
-      return { 
-        status: 'healthy', 
+
+      return {
+        status: 'healthy',
         message: 'Request storage operational',
-        details: { kvOperationsTest: 'passed' }
+        details: { kvOperationsTest: 'passed' },
       };
     } catch (error) {
-      return { 
-        status: 'unhealthy', 
-        message: `Storage health check failed: ${error instanceof Error ? error.message : String(error)}` 
+      return {
+        status: 'unhealthy',
+        message: `Storage health check failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -320,12 +344,16 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
     completedRequests: number;
   }> {
     try {
-      const { keys: requestKeys } = await this.requestsKV.list({ prefix: 'request:' });
-      const { keys: documentKeys } = await this.documentsKV.list({ prefix: 'document:' });
-      
+      const { keys: requestKeys } = await this.requestsKV.list({
+        prefix: 'request:',
+      });
+      const { keys: documentKeys } = await this.documentsKV.list({
+        prefix: 'document:',
+      });
+
       let activeRequests = 0;
       let completedRequests = 0;
-      
+
       // Count request statuses (sample-based for performance)
       const sampleSize = Math.min(requestKeys.length, 100);
       for (let i = 0; i < sampleSize; i++) {
@@ -335,7 +363,10 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
             requestKey.name.replace('request:', '')
           );
           if (request) {
-            if (request.status === 'collecting' || request.status === 'processing') {
+            if (
+              request.status === 'collecting' ||
+              request.status === 'processing'
+            ) {
               activeRequests++;
             } else if (request.status === 'completed') {
               completedRequests++;
@@ -343,19 +374,19 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
           }
         }
       }
-      
+
       // Scale up if we sampled
       if (sampleSize < requestKeys.length) {
         const scaleFactor = requestKeys.length / sampleSize;
         activeRequests = Math.round(activeRequests * scaleFactor);
         completedRequests = Math.round(completedRequests * scaleFactor);
       }
-      
+
       return {
         totalRequests: requestKeys.length,
         totalDocuments: documentKeys.length,
         activeRequests,
-        completedRequests
+        completedRequests,
       };
     } catch (error) {
       console.error('Error getting storage statistics:', error);
@@ -363,7 +394,7 @@ export class CloudflareRequestStorage implements RequestStorage, DocumentStorage
         totalRequests: 0,
         totalDocuments: 0,
         activeRequests: 0,
-        completedRequests: 0
+        completedRequests: 0,
       };
     }
   }

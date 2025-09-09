@@ -99,8 +99,9 @@ export class ConversationHandler {
 
     try {
       // Get or create user request (new architecture)
-      let activeRequest = await this.requestManager.getUserActiveRequest(userId);
-      
+      let activeRequest =
+        await this.requestManager.getUserActiveRequest(userId);
+
       // Keep session for backward compatibility (some admin features may still use it)
       let session = await this.sessionService.getSession(userId);
       if (!session) {
@@ -129,7 +130,7 @@ export class ConversationHandler {
           chatId,
           conversationState,
           hasActiveRequest: !!activeRequest,
-          requestId: activeRequest?.id
+          requestId: activeRequest?.id,
         }
       );
 
@@ -137,7 +138,11 @@ export class ConversationHandler {
       if (message.text) {
         await this.handleTextMessage(message, conversationState, activeRequest);
       } else if (message.document) {
-        await this.handleDocumentMessage(message, conversationState, activeRequest);
+        await this.handleDocumentMessage(
+          message,
+          conversationState,
+          activeRequest
+        );
       } else {
         await this.loggingService.log(
           'WARN',
@@ -171,9 +176,13 @@ export class ConversationHandler {
   private getConversationStateFromRequest(request: UserRequest): string {
     if (request.status === 'collecting') {
       const documents = request.documentIds;
-      const hasResume = documents.some(docId => docId.includes('resume') || docId.includes('doc'));
-      const hasJobPost = documents.some(docId => docId.includes('job') || docId.includes('post'));
-      
+      const hasResume = documents.some(
+        (docId) => docId.includes('resume') || docId.includes('doc')
+      );
+      const hasJobPost = documents.some(
+        (docId) => docId.includes('job') || docId.includes('post')
+      );
+
       if (!hasResume && !hasJobPost) {
         return 'waiting_resume';
       } else if (hasResume && !hasJobPost) {
@@ -295,7 +304,7 @@ export class ConversationHandler {
       }
 
       // Determine document type based on conversation state
-      const documentType: 'resume' | 'job_post' = 
+      const documentType: 'resume' | 'job_post' =
         currentState === 'waiting_resume' ? 'resume' : 'job_post';
 
       // Process document through request pipeline
@@ -313,7 +322,7 @@ export class ConversationHandler {
         mimeType: documentRef.originalMimeType,
         text: documentRef.text,
         wordCount: documentRef.wordCount,
-        processedAt: documentRef.processedAt
+        processedAt: documentRef.processedAt,
       };
 
       if (currentState === 'waiting_resume') {
@@ -436,7 +445,7 @@ export class ConversationHandler {
 
       // Update session state for backward compatibility
       await this.sessionService.updateState(userId, 'waiting_resume');
-      
+
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: `📄 Я помогу проанализировать, насколько ваше резюме соответствует вакансии!\n\n🆔 Запрос: ${request.id.slice(-8)}\n\nПожалуйста, отправьте своё резюме. Можно:\n• Прикрепить PDF или DOCX файл\n• Вставить текст в нескольких сообщениях\n\nКогда завершите отправку всех частей резюме, нажмите кнопку ниже «Готово с резюме» или напишите: \n\n✅ готово\n\nПосле этого я попрошу отправить текст вакансии.`,
@@ -969,7 +978,8 @@ SPIN-продажи
   ): Promise<void> {
     try {
       // Cancel active request if exists
-      const activeRequest = await this.requestManager.getUserActiveRequest(userId);
+      const activeRequest =
+        await this.requestManager.getUserActiveRequest(userId);
       if (activeRequest) {
         await this.requestManager.cancelRequest(activeRequest.id);
         await this.telegramService.sendMessage({

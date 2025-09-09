@@ -1,6 +1,6 @@
 /**
  * Document Processing Pipeline
- * 
+ *
  * Handles document-to-text conversion and creates DocumentReference objects
  * for the request-based architecture.
  */
@@ -18,10 +18,17 @@ export interface DocumentStorage {
  * Pipeline for processing documents and creating structured references
  */
 export class DocumentProcessingPipeline {
-  private ai: any;
+  private ai: {
+    run: (model: string, options: unknown) => Promise<unknown>;
+  };
   private storage: DocumentStorage;
 
-  constructor(ai: any, storage: DocumentStorage) {
+  constructor(
+    ai: {
+      run: (model: string, options: unknown) => Promise<unknown>;
+    },
+    storage: DocumentStorage
+  ) {
     this.ai = ai;
     this.storage = storage;
   }
@@ -36,17 +43,16 @@ export class DocumentProcessingPipeline {
     fileName?: string,
     mimeType?: string
   ): Promise<DocumentReference> {
-    
     const documentId = this.generateDocumentId();
-    
+
     try {
       // Convert document to text
       const { text, conversionMethod } = await this.convertToText(
-        content, 
-        fileName, 
+        content,
+        fileName,
         mimeType
       );
-      
+
       // Create document reference
       const document: DocumentReference = {
         id: documentId,
@@ -58,19 +64,22 @@ export class DocumentProcessingPipeline {
         text,
         wordCount: this.countWords(text),
         conversionMethod,
-        processedAt: new Date().toISOString()
+        processedAt: new Date().toISOString(),
       };
-      
+
       // Store document
       await this.storage.storeDocument(document);
-      
-      console.log(`✅ Document processed: ${documentId} (${document.wordCount} words)`);
-      
+
+      console.log(
+        `✅ Document processed: ${documentId} (${document.wordCount} words)`
+      );
+
       return document;
-      
     } catch (error) {
       console.error('Error in document processing pipeline:', error);
-      throw new Error(`Failed to process document: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to process document: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -81,14 +90,16 @@ export class DocumentProcessingPipeline {
     content: ArrayBuffer,
     fileName?: string,
     mimeType?: string
-  ): Promise<{ text: string; conversionMethod: DocumentReference['conversionMethod'] }> {
-    
+  ): Promise<{
+    text: string;
+    conversionMethod: DocumentReference['conversionMethod'];
+  }> {
     // Handle plain text
     if (mimeType === 'text/plain' || fileName?.endsWith('.txt')) {
       const text = new TextDecoder('utf-8').decode(content);
       return { text, conversionMethod: 'text-input' };
     }
-    
+
     // Handle PDF and DOCX with Cloudflare AI (with fallback)
     if (this.isPDFOrDOCX(fileName, mimeType)) {
       console.log('🔍 Document processing pipeline - AI binding check:', {
@@ -96,7 +107,7 @@ export class DocumentProcessingPipeline {
         aiType: typeof this.ai,
         hasToMarkdown: this.ai ? typeof this.ai.toMarkdown : 'no-ai',
         fileName,
-        mimeType
+        mimeType,
       });
 
       // Try Cloudflare Workers AI first
@@ -105,52 +116,78 @@ export class DocumentProcessingPipeline {
           // Check if toMarkdown method exists
           if (typeof this.ai.toMarkdown === 'function') {
             const blob = new Blob([content], {
-              type: mimeType || this.detectMimeType(fileName)
+              type: mimeType || this.detectMimeType(fileName),
             });
 
             console.log('🔄 Calling AI.toMarkdown...');
-            const results = await this.ai.toMarkdown([{
-              name: fileName || 'document',
-              blob
-            }]);
+            const results = await this.ai.toMarkdown([
+              {
+                name: fileName || 'document',
+                blob,
+              },
+            ]);
 
             console.log('📋 AI.toMarkdown results:', {
               hasResults: !!results,
               resultsLength: results ? results.length : 0,
-              firstResult: results && results[0] ? {
-                hasMarkdown: !!results[0].markdown,
-                hasData: !!results[0].data,
-                markdownLength: results[0].markdown ? results[0].markdown.length : 0,
-                dataLength: results[0].data ? results[0].data.length : 0
-              } : null
+              firstResult:
+                results && results[0]
+                  ? {
+                      hasMarkdown: !!results[0].markdown,
+                      hasData: !!results[0].data,
+                      markdownLength: results[0].markdown
+                        ? results[0].markdown.length
+                        : 0,
+                      dataLength: results[0].data ? results[0].data.length : 0,
+                    }
+                  : null,
             });
 
             if (results && results[0]) {
               // Cloudflare Workers AI sometimes returns content in 'data' property instead of 'markdown'
               const rawContent = results[0].markdown || results[0].data;
 
-              if (rawContent && typeof rawContent === 'string' && rawContent.trim()) {
+              if (
+                rawContent &&
+                typeof rawContent === 'string' &&
+                rawContent.trim()
+              ) {
                 const text = this.markdownToText(rawContent);
-                console.log('✅ Document processed with Cloudflare Workers AI, extracted', text.length, 'characters');
+                console.log(
+                  '✅ Document processed with Cloudflare Workers AI, extracted',
+                  text.length,
+                  'characters'
+                );
                 return { text, conversionMethod: 'cloudflare-ai' };
               } else {
-                console.error('❌ AI.toMarkdown returned empty content:', results[0]);
+                console.error(
+                  '❌ AI.toMarkdown returned empty content:',
+                  results[0]
+                );
               }
             } else {
               console.error('❌ AI.toMarkdown returned no results:', results);
             }
           } else {
-            console.warn('⚠️ AI.toMarkdown method not available, trying fallback');
+            console.warn(
+              '⚠️ AI.toMarkdown method not available, trying fallback'
+            );
           }
         } catch (error) {
-          console.error('⚠️ Cloudflare Workers AI failed, trying fallback:', error);
+          console.error(
+            '⚠️ Cloudflare Workers AI failed, trying fallback:',
+            error
+          );
         }
       } else {
         console.warn('⚠️ AI service not available, trying JavaScript fallback');
       }
 
       // Fallback to JavaScript PDF parsing for PDFs
-      if (mimeType === 'application/pdf' || (fileName && fileName.endsWith('.pdf'))) {
+      if (
+        mimeType === 'application/pdf' ||
+        (fileName && fileName.endsWith('.pdf'))
+      ) {
         try {
           const { text } = await this.fallbackPdfProcessing(content);
           console.log('✅ PDF processed with JavaScript fallback');
@@ -169,12 +206,12 @@ export class DocumentProcessingPipeline {
         '2. Убедитесь, что у вас есть платный план Cloudflare',
         '3. Скопируйте и вставьте текст вручную',
         '',
-        '💡 Workers AI требует платный аккаунт для обработки документов'
+        '💡 Workers AI требует платный аккаунт для обработки документов',
       ].join('\n');
 
       throw new Error(errorMessage);
     }
-    
+
     // Fallback to text decoding
     try {
       const text = new TextDecoder('utf-8').decode(content);
@@ -189,10 +226,11 @@ export class DocumentProcessingPipeline {
    */
   private isPDFOrDOCX(fileName?: string, mimeType?: string): boolean {
     return Boolean(
-      mimeType === 'application/pdf' || 
-      (fileName && fileName.endsWith('.pdf')) ||
-      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      (fileName && fileName.endsWith('.docx'))
+      mimeType === 'application/pdf' ||
+        (fileName && fileName.endsWith('.pdf')) ||
+        mimeType ===
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        (fileName && fileName.endsWith('.docx'))
     );
   }
 
@@ -201,7 +239,7 @@ export class DocumentProcessingPipeline {
    */
   private detectMimeType(fileName?: string): string {
     if (!fileName) return 'application/octet-stream';
-    
+
     if (fileName.endsWith('.pdf')) {
       return 'application/pdf';
     }
@@ -211,7 +249,7 @@ export class DocumentProcessingPipeline {
     if (fileName.endsWith('.txt')) {
       return 'text/plain';
     }
-    
+
     return 'application/octet-stream';
   }
 
@@ -222,7 +260,7 @@ export class DocumentProcessingPipeline {
     return text
       .trim()
       .split(/\s+/)
-      .filter(word => word.length > 0).length;
+      .filter((word) => word.length > 0).length;
   }
 
   /**
@@ -256,10 +294,14 @@ export class DocumentProcessingPipeline {
   /**
    * Fallback PDF processing using JavaScript library
    */
-  private async fallbackPdfProcessing(_content: ArrayBuffer): Promise<{ text: string }> {
+  private async fallbackPdfProcessing(
+    _content: ArrayBuffer
+  ): Promise<{ text: string }> {
     // pdf-parse doesn't work in Cloudflare Workers environment
     // For now, we'll provide a helpful error message
-    throw new Error('PDF processing requires Cloudflare Workers AI. Please enable it in your account or copy and paste the text manually.');
+    throw new Error(
+      'PDF processing requires Cloudflare Workers AI. Please enable it in your account or copy and paste the text manually.'
+    );
   }
 
   /**
@@ -279,7 +321,10 @@ export class DocumentProcessingPipeline {
   /**
    * Health check
    */
-  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; message: string }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    message: string;
+  }> {
     try {
       // Check AI availability
       if (!this.ai) {
@@ -289,11 +334,14 @@ export class DocumentProcessingPipeline {
       // Check storage availability
       // Note: We could test storage with a simple operation here
 
-      return { status: 'healthy', message: 'Document processing pipeline operational' };
+      return {
+        status: 'healthy',
+        message: 'Document processing pipeline operational',
+      };
     } catch (error) {
-      return { 
-        status: 'unhealthy', 
-        message: `Pipeline health check failed: ${error instanceof Error ? error.message : String(error)}` 
+      return {
+        status: 'unhealthy',
+        message: `Pipeline health check failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

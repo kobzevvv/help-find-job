@@ -8,9 +8,16 @@ import { ProcessedDocument } from '../types/session';
 
 export class DocumentService {
   private maxFileSizeMB: number;
-  private ai: any;
+  private ai?: {
+    run: (model: string, options: unknown) => Promise<unknown>;
+  };
 
-  constructor(maxFileSizeMB: number = 10, ai?: any) {
+  constructor(
+    maxFileSizeMB: number = 10,
+    ai?: {
+      run: (model: string, options: unknown) => Promise<unknown>;
+    }
+  ) {
     this.maxFileSizeMB = maxFileSizeMB;
     this.ai = ai;
   }
@@ -95,21 +102,28 @@ export class DocumentService {
         // Check if toMarkdown method exists
         if (typeof this.ai.toMarkdown === 'function') {
           const blob = new Blob([content], { type: 'application/pdf' });
-          
-          const results = await this.ai.toMarkdown([{
-            name: 'document.pdf',
-            blob
-          }]);
+
+          const results = await this.ai.toMarkdown([
+            {
+              name: 'document.pdf',
+              blob,
+            },
+          ]);
 
           if (results && results[0] && results[0].markdown) {
             console.log('✅ PDF processed with Cloudflare Workers AI');
             return this.markdownToText(results[0].markdown);
           }
         } else {
-          console.warn('⚠️ AI.toMarkdown method not available, trying fallback');
+          console.warn(
+            '⚠️ AI.toMarkdown method not available, trying fallback'
+          );
         }
       } catch (error) {
-        console.error('⚠️ Cloudflare Workers AI failed, trying fallback:', error);
+        console.error(
+          '⚠️ Cloudflare Workers AI failed, trying fallback:',
+          error
+        );
       }
     } else {
       console.warn('⚠️ AI service not available, trying JavaScript fallback');
@@ -117,7 +131,9 @@ export class DocumentService {
 
     // Note: JavaScript PDF parsing libraries don't work in Cloudflare Workers
     // This fallback is for future compatibility if we switch to a Workers-compatible library
-    console.warn('⚠️ JavaScript PDF fallback not available in Cloudflare Workers');
+    console.warn(
+      '⚠️ JavaScript PDF fallback not available in Cloudflare Workers'
+    );
 
     // If all methods fail, provide helpful guidance
     const errorMessage = [
@@ -128,9 +144,9 @@ export class DocumentService {
       '2. Убедитесь, что у вас есть платный план Cloudflare',
       '3. Скопируйте и вставьте текст вручную',
       '',
-      '💡 Workers AI требует платный аккаунт для обработки документов'
+      '💡 Workers AI требует платный аккаунт для обработки документов',
     ].join('\n');
-    
+
     throw new Error(errorMessage);
   }
 
@@ -143,14 +159,16 @@ export class DocumentService {
       try {
         // Check if toMarkdown method exists
         if (typeof this.ai.toMarkdown === 'function') {
-          const blob = new Blob([content], { 
-            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          const blob = new Blob([content], {
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           });
-          
-          const results = await this.ai.toMarkdown([{
-            name: 'document.docx',
-            blob
-          }]);
+
+          const results = await this.ai.toMarkdown([
+            {
+              name: 'document.docx',
+              blob,
+            },
+          ]);
 
           if (results && results[0] && results[0].markdown) {
             console.log('✅ DOCX processed with Cloudflare Workers AI');
@@ -176,9 +194,9 @@ export class DocumentService {
       '3. Конвертируйте DOCX в PDF и попробуйте снова',
       '4. Скопируйте и вставьте текст вручную',
       '',
-      '💡 Workers AI требует платный аккаунт для обработки документов'
+      '💡 Workers AI требует платный аккаунт для обработки документов',
     ].join('\n');
-    
+
     throw new Error(errorMessage);
   }
 

@@ -134,14 +134,14 @@ export interface UserRequest {
   chatId: number;
   createdAt: string;
   status: 'collecting' | 'processing' | 'completed' | 'error';
-  
+
   // Documents associated with this request
   documentIds: string[]; // References to DocumentReference.id
-  
+
   // Processing results
   analysis?: EnhancedAnalysis;
   processedAt?: string;
-  
+
   // Request metadata
   lastActivity: string;
   language?: string | undefined;
@@ -155,20 +155,24 @@ export interface DocumentReference {
   id: string; // "doc-789012"
   requestId: string; // Links back to UserRequest.id
   type: 'resume' | 'job_post';
-  
+
   // Original document info
   originalName?: string | undefined;
   originalMimeType?: string | undefined;
   originalSize?: number | undefined;
-  
+
   // Processed text (from current DocumentService)
   text: string;
   wordCount: number;
-  
+
   // Processing metadata
-  conversionMethod: 'cloudflare-ai' | 'text-input' | 'fallback' | 'javascript-fallback';
+  conversionMethod:
+    | 'cloudflare-ai'
+    | 'text-input'
+    | 'fallback'
+    | 'javascript-fallback';
   processedAt: string;
-  
+
   // Future: structured data extraction (Iteration 3)
   structuredData?: ResumeStructuredData | JobPostStructuredData;
 }
@@ -184,11 +188,11 @@ export interface ResumeStructuredData {
     phone?: string;
     location?: string;
   };
-  
+
   experience?: JobExperience[];
   education?: EducationRecord[];
   skills?: string[];
-  
+
   // For "beautiful PDF generation" feature
   lastJob?: JobExperience;
   previousJob?: JobExperience;
@@ -203,12 +207,12 @@ export interface JobPostStructuredData {
   company?: string;
   location?: string;
   salaryRange?: string;
-  
+
   requirements?: {
     required: string[];
     preferred: string[];
   };
-  
+
   responsibilities?: string[];
   benefits?: string[];
 }
@@ -222,10 +226,10 @@ export interface JobExperience {
   startDate: string;
   endDate?: string; // undefined for current job
   duration?: string; // "2 years 3 months"
-  
+
   responsibilities: string[];
   achievements: string[];
-  
+
   // For matching analysis
   technologies?: string[];
   industryType?: string;
@@ -240,7 +244,7 @@ export interface EducationRecord {
   field: string;
   startDate: string;
   endDate?: string;
-  
+
   gpa?: string;
   honors?: string[];
   relevantCourses?: string[];

@@ -7,6 +7,7 @@
 
 import { EnvironmentConfigurationService } from '../config/environment';
 import { LoggingService } from '../services/logging';
+import { Env } from '../index';
 import { SessionService } from '../services/session';
 import { TelegramService } from '../services/telegram';
 import { DocumentService } from '../services/document';
@@ -28,7 +29,19 @@ export interface ServiceHealth {
   name: string;
   status: 'healthy' | 'unhealthy' | 'unknown';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
+}
+
+export interface AppConfig {
+  admin: {
+    [environment: string]: {
+      authRequired: boolean;
+      openAccess: boolean;
+      sessionTimeoutHours: number;
+      maxLoginAttempts: number;
+      loginCooldownMinutes: number;
+    };
+  };
 }
 
 export interface ServiceInfo {
@@ -42,8 +55,8 @@ export interface ServiceInfo {
  * Main dependency injection container
  */
 export class ServiceContainer {
-  private services: Map<string, any> = new Map();
-  private factories: Map<string, ServiceFactory<any>> = new Map();
+  private services: Map<string, unknown> = new Map();
+  private factories: Map<string, ServiceFactory<unknown>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
 
@@ -236,7 +249,7 @@ export class ServiceContainer {
  * Create a configured service container
  */
 export async function createServiceContainer(
-  env: any
+  env: Env
 ): Promise<ServiceContainer> {
   const container = new ServiceContainer();
 
@@ -336,8 +349,8 @@ export async function createServiceContainer(
     async create() {
       return new CloudflareRequestStorage(
         env.SESSIONS, // Reuse existing KV for requests
-        env.CACHE,    // Use cache KV for documents
-        env.SESSIONS  // Use sessions KV for user request index
+        env.CACHE, // Use cache KV for documents
+        env.SESSIONS // Use sessions KV for user request index
       );
     },
   });
@@ -346,20 +359,28 @@ export async function createServiceContainer(
   container.register('documentPipeline', {
     dependencies: ['requestStorage'],
     async create(container) {
-      const storage = await container.get<CloudflareRequestStorage>('requestStorage');
+      const storage =
+        await container.get<CloudflareRequestStorage>('requestStorage');
       return new DocumentProcessingPipeline(env.AI, storage);
     },
   });
 
   // Register user request manager
   container.register('requestManager', {
-    dependencies: ['documentPipeline', 'requestStorage', 'enhancedAI', 'logging'],
+    dependencies: [
+      'documentPipeline',
+      'requestStorage',
+      'enhancedAI',
+      'logging',
+    ],
     async create(container) {
-      const pipeline = await container.get<DocumentProcessingPipeline>('documentPipeline');
-      const storage = await container.get<CloudflareRequestStorage>('requestStorage');
+      const pipeline =
+        await container.get<DocumentProcessingPipeline>('documentPipeline');
+      const storage =
+        await container.get<CloudflareRequestStorage>('requestStorage');
       const enhancedAI = await container.get<EnhancedAIService>('enhancedAI');
       const logging = await container.get<LoggingService>('logging');
-      
+
       return new UserRequestManager(pipeline, storage, enhancedAI, logging);
     },
   });
@@ -404,7 +425,8 @@ export async function createServiceContainer(
       const enhancedAIService =
         await container.get<EnhancedAIService>('enhancedAI');
       const loggingService = await container.get<LoggingService>('logging');
-      const requestManager = await container.get<UserRequestManager>('requestManager');
+      const requestManager =
+        await container.get<UserRequestManager>('requestManager');
       const config =
         await container.get<EnvironmentConfigurationService>('config');
 
@@ -452,7 +474,7 @@ export async function createServiceContainer(
 /**
  * Load application configuration (environment-specific)
  */
-async function loadAppConfig(environment: string): Promise<any> {
+async function loadAppConfig(environment: string): Promise<AppConfig> {
   // Environment-specific configuration
   const configs = {
     development: {
