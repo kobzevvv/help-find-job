@@ -366,8 +366,8 @@ jobs:
           BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_PRODUCTION }}"
           WEBHOOK_SECRET="${{ secrets.WEBHOOK_SECRET_PRODUCTION || 'production-webhook-secret-default' }}"
           
-          # Get production worker URL
-          WORKER_URL="https://help-with-job-search-telegram-bot.$(echo '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}' | head -c 8).workers.dev"
+          # Get production worker URL (consistent with wrangler.toml and verification)
+          WORKER_URL="https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev"
           
           echo "🌐 Setting webhook URL: ${WORKER_URL}/webhook"
           
@@ -390,7 +390,7 @@ jobs:
         run: |
           echo "🏥 Running production health checks..."
           
-          WORKER_URL="https://help-with-job-search-telegram-bot.$(echo '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}' | head -c 8).workers.dev"
+          WORKER_URL="https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev"
           
           echo "⏳ Waiting 30 seconds for production deployment stabilization..."
           sleep 30
@@ -419,7 +419,7 @@ jobs:
         run: |
           echo "🧪 Running production smoke tests..."
           
-          WORKER_URL="https://help-with-job-search-telegram-bot.$(echo '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}' | head -c 8).workers.dev"
+          WORKER_URL="https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev"
           
           # Test webhook endpoint
           WEBHOOK_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${WORKER_URL}/webhook" \
