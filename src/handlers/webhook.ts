@@ -8,16 +8,16 @@ import { LoggingService } from '../services/logging';
 
 export class WebhookHandler {
   private conversationHandler: ConversationHandler;
-  // TODO: Re-add webhookSecret property when validation is re-enabled
+  private webhookSecret: string | undefined;
   private loggingService: LoggingService | undefined;
 
   constructor(
     conversationHandler: ConversationHandler,
-    _webhookSecret?: string, // TODO: Remove underscore when webhook validation is re-enabled
+    webhookSecret?: string,
     loggingService?: LoggingService
   ) {
     this.conversationHandler = conversationHandler;
-    // TODO: Re-enable: this.webhookSecret = webhookSecret;
+    this.webhookSecret = webhookSecret;
     this.loggingService = loggingService;
   }
 
@@ -49,21 +49,20 @@ export class WebhookHandler {
         return new Response('Method not allowed', { status: 405 });
       }
 
-      // Validate webhook secret if configured (disabled for staging testing)
-      // TODO: Re-enable webhook secret validation in production
-      /*
-      const secretHeader = request.headers.get(
-        'X-Telegram-Bot-Api-Secret-Token'
-      );
-      if (secretHeader !== this.webhookSecret) {
-        await this.loggingService?.logError(
-          'WEBHOOK_AUTH',
-          'Invalid webhook secret',
-          new Error('Unauthorized webhook request')
+      // Validate webhook secret if configured
+      if (this.webhookSecret) {
+        const secretHeader = request.headers.get(
+          'X-Telegram-Bot-Api-Secret-Token'
         );
-        return new Response('Unauthorized', { status: 401 });
+        if (secretHeader !== this.webhookSecret) {
+          await this.loggingService?.logError(
+            'WEBHOOK_AUTH',
+            'Invalid webhook secret',
+            new Error('Unauthorized webhook request')
+          );
+          return new Response('Unauthorized', { status: 401 });
+        }
       }
-      */
 
       // Parse request body
       const update: TelegramUpdate = await request.json();
