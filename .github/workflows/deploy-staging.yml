@@ -69,12 +69,19 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env staging
         env:
-          # Public staging bot token - safe to expose for testing
+          # 🔄 EXISTING: Legacy variables (for migration compatibility)
           TELEGRAM_BOT_TOKEN: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING }}
           WEBHOOK_SECRET: "3c8a4efeb4b36eed52758eb194300a89d3074567299b3a826ea0922100a16752"
-          # Set staging admin password explicitly
           ADMIN_PASSWORD_STAGING: "12354678"
+          
+          # 🆕 NEW: Environment-specific variables (preferred)
+          BOT_TOKEN_STAGING: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
+          BOT_USERNAME_STAGING: "job_search_help_staging_bot"
+          WORKER_NAME_STAGING: "help-with-job-search-telegram-bot-staging"
+          WORKER_URL_STAGING: "https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
+          DEBUG_LOGGING_STAGING: "true"
+          # 🔒 WEBHOOK_SECRET_STAGING intentionally NOT set (staging doesn't need webhook validation)
 
       - name: Set staging webhook
         if: success()
@@ -82,6 +89,12 @@ jobs:
           curl -X POST "https://api.telegram.org/bot8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI/setWebhook" \
             -H "Content-Type: application/json" \
             -d '{"url": "https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/webhook", "secret_token": "3c8a4efeb4b36eed52758eb194300a89d3074567299b3a826ea0922100a16752"}'
+
+      - name: Validate deployment configuration
+        if: success()
+        run: |
+          echo "🔍 Validating deployment configuration and migration safety..."
+          npm run validate:migration
 
       - name: Comment PR with staging bot info
         if: github.event_name == 'pull_request'

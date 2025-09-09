@@ -27,7 +27,9 @@ export class TelegramService {
       });
 
       if (!response.ok) {
-        console.error('Failed to send message:', await response.text());
+        const errorText = await response.text();
+        console.error('Failed to send message:', errorText);
+        console.error('Chat ID:', options.chat_id, 'Text length:', options.text?.length);
         return false;
       }
 

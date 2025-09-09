@@ -102,28 +102,75 @@ curl "https://api.telegram.org/bot8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI
    - Send `/start` to [@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot)
    - Should respond with bot commands
 
-## 🔒 Production Secrets (Future)
+## 🔒 Production Secrets
 
-Production bot is private and managed separately:
+Production bot requires additional secrets for automated deployment:
 
-- **Production Bot**: [@job_search_help_bot](https://t.me/job_search_help_bot)
-- **Secrets**: Configured manually by maintainers
+### Required Production Secrets
+
+Add these additional secrets for production deployment:
+
+#### **Production Bot Configuration**
+- `TELEGRAM_BOT_TOKEN_PRODUCTION`: Production Telegram bot token
+  - **IMPORTANT**: Must be different from staging token
+  - Create a new bot with @BotFather for production
+  - Format: `1234567890:ABCDEFGHIJKLMNOP...`
+
+- `OPENAI_API_KEY_PRODUCTION`: OpenAI API key for production environment
+  - Get from: https://platform.openai.com/api-keys
+  - Should be separate from staging for billing/rate limiting
+
+#### **Security Configuration**
+- `WEBHOOK_SECRET_PRODUCTION`: Webhook secret for production (optional)
+  - Generate a strong random string: `openssl rand -hex 32`
+  - If not set, will use a default value
+
+- `ADMIN_PASSWORD_PRODUCTION`: Admin password for production (optional)
+  - Set a strong password for production admin access
+  - If not set, will use a default value
+
+### Production Deployment
+
+Production deploys automatically when:
+1. ✅ Pull requests are merged to `main` branch
+2. ✅ All tests pass
+3. ✅ Code has been tested in staging first
+
+Manual production deployment is also available via GitHub Actions workflow dispatch for emergency releases.
+
+### Production Bot Information
 - **Environment**: `production` in wrangler.toml
+- **Worker Name**: `help-with-job-search-telegram-bot`
+- **Auto-deploys**: On PR merge to main
+- **Manual deploys**: Available via GitHub Actions
 
-Production secrets are not stored in GitHub and are managed through direct Cloudflare Workers secret management.
+### Security Notes
+- 🔐 **Never use staging tokens in production**
+- 🔐 **Use separate OpenAI keys for billing isolation**
+- 🔐 **Set strong webhook secrets and admin passwords**
+- 🔐 **Monitor production deployments via GitHub issues**
 
 ## 🏗️ Workflow Architecture
 
+### Staging Deployment
 ```
 GitHub Push → GitHub Actions → Cloudflare Workers → Telegram Webhook
      ↓              ↓                    ↓              ↓
    main/PR    Deploy staging      Set webhook    @job_search_help_staging_bot
 ```
 
+### Production Deployment
+```
+PR Merge → GitHub Actions → Cloudflare Workers → Telegram Webhook → Issue Tracking
+    ↓           ↓                   ↓              ↓              ↓
+  main    Deploy production    Set webhook   Production Bot   Deployment Issue
+```
+
 ### Files involved:
-- `.github/workflows/deploy-staging.yml` - GitHub Actions workflow
-- `.env.staging` - Public staging configuration  
+- `.github/workflows/deploy-staging.yml` - Staging deployment workflow
+- `.github/workflows/deploy-production.yml` - Production deployment workflow
 - `wrangler.toml` - Cloudflare deployment settings
+- Repository secrets - Sensitive configuration values
 
 ---
 
