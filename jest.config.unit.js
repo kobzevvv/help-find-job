@@ -40,7 +40,7 @@ module.exports = {
   restoreMocks: true,
   
   // Module handling
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@/types/(.*)$': '<rootDir>/src/types/$1',
     '^@/handlers/(.*)$': '<rootDir>/src/handlers/$1',

@@ -6,9 +6,11 @@ import { ProcessedDocument } from '../types/session';
 
 export class DocumentService {
   private maxFileSizeMB: number;
+  private ai?: any;
 
-  constructor(maxFileSizeMB: number = 10) {
+  constructor(maxFileSizeMB: number = 10, ai?: any) {
     this.maxFileSizeMB = maxFileSizeMB;
+    this.ai = ai;
   }
 
   /**

@@ -23,7 +23,7 @@ module.exports = {
   clearMocks: true,
   
   // Module handling - prefer compiled dist files
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/dist/$1',
     '^@/types/(.*)$': '<rootDir>/dist/types/$1',
     '^@/handlers/(.*)$': '<rootDir>/dist/handlers/$1',
