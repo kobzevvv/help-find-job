@@ -2,6 +2,20 @@
  * Admin authentication service for log access
  */
 
+// Configuration interface for admin authentication
+interface AdminConfig {
+  admin?: Record<
+    string,
+    {
+      authRequired?: boolean;
+      openAccess?: boolean;
+      sessionTimeoutHours?: number;
+      maxLoginAttempts?: number;
+      loginCooldownMinutes?: number;
+    }
+  >;
+}
+
 export interface AdminSession {
   userId: number;
   chatId: number;
@@ -31,7 +45,7 @@ export class AdminAuthService {
   constructor(
     kv?: KVNamespace,
     environment: string = 'development',
-    config: any = {},
+    config: AdminConfig = {},
     adminPassword?: string
   ) {
     this.kv = kv;

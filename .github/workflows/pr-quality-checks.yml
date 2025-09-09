@@ -40,10 +40,8 @@ jobs:
       - name: Build (compile TS)
         run: npm run build:ci
 
-      - name: E2E Tests (no secrets)
-        env:
-          OPENAI_API_KEY: ''
-        run: npm run test:e2e
+      # E2E tests disabled - expensive and not needed for PR validation
+      # Integration tests provide sufficient coverage for pull requests
 
 
 

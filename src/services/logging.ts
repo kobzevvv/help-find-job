@@ -59,7 +59,7 @@ export class LoggingService {
     level: LogEntry['level'],
     eventType: string,
     message: string,
-    data?: any,
+    data?: Record<string, unknown>,
     userId?: number,
     chatId?: number,
     error?: Error
@@ -121,7 +121,7 @@ export class LoggingService {
     userId: number,
     chatId: number,
     message: string,
-    messageData?: any
+    messageData?: Record<string, unknown>
   ): Promise<void> {
     await this.log(
       'INFO',
@@ -140,7 +140,7 @@ export class LoggingService {
     userId: number,
     chatId: number,
     response: string,
-    responseData?: any
+    responseData?: Record<string, unknown>
   ): Promise<void> {
     await this.log(
       'INFO',
@@ -200,7 +200,7 @@ export class LoggingService {
     chatId: number,
     success: boolean,
     duration: number,
-    details?: any
+    details?: Record<string, unknown>
   ): Promise<void> {
     await this.log(
       'INFO',
@@ -220,7 +220,7 @@ export class LoggingService {
     updateType: string,
     userId?: number,
     chatId?: number,
-    data?: any
+    data?: Record<string, unknown>
   ): Promise<void> {
     await this.log(
       'DEBUG',

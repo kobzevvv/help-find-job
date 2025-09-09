@@ -185,11 +185,17 @@ export class WebhookHandler {
   /**
    * Validate update structure
    */
-  private isValidUpdate(update: any): update is TelegramUpdate {
+  private isValidUpdate(update: unknown): update is TelegramUpdate {
+    // Type guard to check if object has update_id property
+    const hasUpdateId = (obj: object): obj is { update_id: unknown } =>
+      'update_id' in obj;
+
     return (
       typeof update === 'object' &&
+      update !== null &&
+      hasUpdateId(update) &&
       typeof update.update_id === 'number' &&
-      (update.message || update.callback_query)
+      ('message' in update || 'callback_query' in update)
     );
   }
 

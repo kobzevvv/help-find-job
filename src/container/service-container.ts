@@ -15,6 +15,23 @@ import { EnhancedAIService } from '../services/enhanced-ai';
 import { AdminAuthService } from '../services/admin-auth';
 import { ConversationHandler } from '../handlers/conversation';
 import { WebhookHandler } from '../handlers/webhook';
+import { Env } from '../index';
+
+// Type for service instances (broad type to accommodate various services)
+type ServiceInstance = object;
+
+// Interface for services that can be health-checked
+interface HealthCheckable {
+  healthCheck?(): Promise<ServiceHealth>;
+}
+
+// Interface for services that can be shut down
+interface Shutdownable {
+  shutdown?(): Promise<void>;
+}
+
+// Combined interface for service lifecycle
+type ManagedService = ServiceInstance & HealthCheckable & Shutdownable;
 
 export interface ServiceFactory<T> {
   create(container: ServiceContainer): Promise<T>;
@@ -25,7 +42,7 @@ export interface ServiceHealth {
   name: string;
   status: 'healthy' | 'unhealthy' | 'unknown';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ServiceInfo {
@@ -39,8 +56,8 @@ export interface ServiceInfo {
  * Main dependency injection container
  */
 export class ServiceContainer {
-  private services: Map<string, any> = new Map();
-  private factories: Map<string, ServiceFactory<any>> = new Map();
+  private services: Map<string, ManagedService> = new Map();
+  private factories: Map<string, ServiceFactory<unknown>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
 
@@ -54,7 +71,7 @@ export class ServiceContainer {
       throw new Error(`Service ${name} is already registered`);
     }
 
-    this.factories.set(name, factory);
+    this.factories.set(name, factory as ServiceFactory<unknown>);
   }
 
   /**
@@ -90,7 +107,7 @@ export class ServiceContainer {
       const service = await factory.create(this);
 
       // Cache and mark as initialized
-      this.services.set(name, service);
+      this.services.set(name, service as ManagedService);
       this.initialized.add(name);
 
       console.log(`✅ Service initialized: ${name}`);
@@ -233,7 +250,7 @@ export class ServiceContainer {
  * Create a configured service container
  */
 export async function createServiceContainer(
-  env: any
+  env: Env
 ): Promise<ServiceContainer> {
   const container = new ServiceContainer();
 
@@ -287,7 +304,7 @@ export async function createServiceContainer(
       const config =
         await container.get<EnvironmentConfigurationService>('config');
       const appConfig = config.getApplicationConfig();
-      return new DocumentService(appConfig.maxFileSizeMB);
+      return new DocumentService(appConfig.maxFileSizeMB, env.AI);
     },
   });
 
@@ -412,7 +429,18 @@ export async function createServiceContainer(
 /**
  * Load application configuration (environment-specific)
  */
-async function loadAppConfig(environment: string): Promise<any> {
+async function loadAppConfig(environment: string): Promise<{
+  admin: Record<
+    string,
+    {
+      authRequired: boolean;
+      openAccess: boolean;
+      sessionTimeoutHours: number;
+      maxLoginAttempts: number;
+      loginCooldownMinutes: number;
+    }
+  >;
+}> {
   // Environment-specific configuration
   const configs = {
     development: {

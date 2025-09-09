@@ -12,6 +12,23 @@ import {
   JobConditionsAnalysis,
 } from '../types/session';
 
+// OpenAI API response interface
+interface OpenAIResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+// Union type for possible analysis results
+type AnalysisResultType =
+  | HeadlineAnalysis
+  | SkillsAnalysis
+  | ExperienceAnalysis
+  | JobConditionsAnalysis
+  | Record<string, unknown>;
+
 export class EnhancedAIService {
   private apiKey: string;
   private model: string;
@@ -318,7 +335,10 @@ ${jobText}
   /**
    * Call OpenAI GPT API with error handling
    */
-  private async callGPT(prompt: string, category: string): Promise<any | null> {
+  private async callGPT(
+    prompt: string,
+    category: string
+  ): Promise<AnalysisResultType | null> {
     try {
       console.log(`Making GPT API call for ${category} analysis...`);
 
@@ -363,7 +383,7 @@ ${jobText}
         return null;
       }
 
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as OpenAIResponse;
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {
@@ -387,7 +407,10 @@ ${jobText}
   /**
    * Attempt to parse JSON from model output, handling code fences and extra text
    */
-  private parseJsonContent(content: string, category: string): any | null {
+  private parseJsonContent(
+    content: string,
+    category: string
+  ): AnalysisResultType | null {
     // Fast path
     try {
       return JSON.parse(content);
