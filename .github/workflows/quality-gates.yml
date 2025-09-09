@@ -38,7 +38,7 @@ jobs:
           cache: 'npm'
       
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: npm-cache
         with:
           path: ~/.npm
@@ -94,7 +94,7 @@ jobs:
           echo "source-hash=$SOURCE_HASH" >> $GITHUB_OUTPUT
       
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-build
         with:
           path: |
@@ -126,7 +126,7 @@ jobs:
       
       - name: Upload coverage reports
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
           path: coverage/
@@ -134,7 +134,7 @@ jobs:
       
       - name: Upload build artifacts
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-${{ steps.build-cache-key.outputs.source-hash }}
           path: |
