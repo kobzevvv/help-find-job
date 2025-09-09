@@ -25,7 +25,7 @@ export class DocumentService {
       const fileSizeMB = fileSizeBytes / (1024 * 1024);
       
       if (fileSizeMB > this.maxFileSizeMB) {
-        throw new Error(`File too large: ${fileSizeMB.toFixed(2)}MB (max: ${this.maxFileSizeMB}MB)`);
+        throw new Error(`Слишком большой файл: ${fileSizeMB.toFixed(2)}MB (максимум: ${this.maxFileSizeMB}MB)`);
       }
 
       let extractedText: string;
@@ -46,7 +46,7 @@ export class DocumentService {
       }
 
       if (!extractedText.trim()) {
-        throw new Error('No text content found in document');
+        throw new Error('В документе не найден текст');
       }
 
       const wordCount = this.countWords(extractedText);
@@ -83,7 +83,7 @@ export class DocumentService {
   private async extractTextFromPDF(_content: ArrayBuffer): Promise<string> {
     // For now, return a message asking user to copy-paste text
     // In production, you'd integrate with a PDF parsing library
-    throw new Error('PDF processing not yet implemented. Please copy and paste the text content instead.');
+    throw new Error('Обработка PDF пока не реализована. Пожалуйста, скопируйте и вставьте текст.');
   }
 
   /**
@@ -93,7 +93,7 @@ export class DocumentService {
   private async extractTextFromDOCX(_content: ArrayBuffer): Promise<string> {
     // For now, return a message asking user to copy-paste text
     // In production, you'd integrate with a DOCX parsing library
-    throw new Error('DOCX processing not yet implemented. Please copy and paste the text content instead.');
+    throw new Error('Обработка DOCX пока не реализована. Пожалуйста, скопируйте и вставьте текст.');
   }
 
   /**
@@ -122,15 +122,15 @@ export class DocumentService {
    */
   validateDocument(document: ProcessedDocument): { isValid: boolean; error?: string } {
     if (!document.text || document.text.trim().length === 0) {
-      return { isValid: false, error: 'Document is empty' };
+      return { isValid: false, error: 'Документ пустой' };
     }
 
     if (document.wordCount < 10) {
-      return { isValid: false, error: 'Document too short (minimum 10 words)' };
+      return { isValid: false, error: 'Слишком короткий текст (минимум 10 слов)' };
     }
 
     if (document.wordCount > 5000) {
-      return { isValid: false, error: 'Document too long (maximum 5000 words)' };
+      return { isValid: false, error: 'Слишком длинный текст (максимум 5000 слов)' };
     }
 
     return { isValid: true };

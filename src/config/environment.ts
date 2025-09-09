@@ -205,7 +205,8 @@ export class EnvironmentConfigurationService {
       
       services: {
         openaiApiKey: this.env.OPENAI_API_KEY || '',
-        openaiModel: this.env.OPENAI_MODEL || (environment === 'production' ? 'gpt-4' : 'gpt-3.5-turbo'),
+        // Prefer a modern, cost-effective default if not explicitly set
+        openaiModel: this.env.OPENAI_MODEL || 'gpt-4o-mini',
       },
       
       security: {

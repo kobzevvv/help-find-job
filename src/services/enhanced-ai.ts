@@ -17,6 +17,7 @@ export class EnhancedAIService {
   private model: string;
   private maxTokens: number;
   private temperature: number;
+  private readonly maxInputChars: number = 20000;
 
   constructor(
     apiKey: string,
@@ -87,36 +88,38 @@ export class EnhancedAIService {
    * Analyze job title vs candidate experience titles
    */
   private async analyzeHeadlines(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<HeadlineAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
-Analyze the JOB TITLE and POSITION TITLES match between this resume and job posting.
+Проанализируй соответствие НАЗВАНИЯ ВАКАНСИИ и ДОЛЖНОСТЕЙ в резюме и вакансии.
 
-RESUME:
-${resume.text}
+РЕЗЮМЕ:
+${resumeText}
 
-JOB POSTING:
-${jobPost.text}
+ВАКАНСИЯ:
+${jobText}
 
-Your task is to:
-1. Extract the main job title from the job posting
-2. Extract all position titles from the candidate's resume
-3. Evaluate how well the titles match
-4. Identify specific problems with title alignment
-5. Provide recommendations
+Твоя задача:
+1. Выделить основное название вакансии
+2. Выделить все должности из резюме кандидата
+3. Оценить, насколько хорошо совпадают названия
+4. Указать конкретные проблемы соответствия
+5. Дать рекомендации
 
-Focus ONLY on job titles and position names. Consider:
-- Title hierarchy and seniority level
-- Industry terminology alignment
-- Role function similarity
-- Career progression shown in titles
+Фокус только на названиях должностей. Учитывай:
+- Иерархию и уровень seniority
+- Соответствие терминологии в индустрии
+- Близость по функциям роли
+- Карьерное развитие в названиях
 
-Respond in this EXACT JSON format:
+Ответь строго в формате JSON:
 {
-  "jobTitle": "exact job title from posting",
-  "candidateTitles": ["title1", "title2", "title3"],
+  "jobTitle": "точное название из вакансии",
+  "candidateTitles": ["должность1", "должность2", "должность3"],
   "matchScore": 0-100,
-  "explanation": "detailed explanation of title alignment",
-  "problems": ["problem1", "problem2"],
-  "recommendations": ["recommendation1", "recommendation2"]
+  "explanation": "подробное объяснение соответствия названий",
+  "problems": ["проблема1", "проблема2"],
+  "recommendations": ["рекомендация1", "рекомендация2"]
 }
 `;
 
@@ -128,41 +131,43 @@ Respond in this EXACT JSON format:
    * Analyze skills match with detailed breakdown
    */
   private async analyzeSkills(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<SkillsAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
-Analyze the SKILLS match between this resume and job posting with detailed breakdown.
+Проанализируй соответствие НАВЫКОВ между резюме и вакансией с подробной структурой.
 
-RESUME:
-${resume.text}
+РЕЗЮМЕ:
+${resumeText}
 
-JOB POSTING:
-${jobPost.text}
+ВАКАНСИЯ:
+${jobText}
 
-Your task is to:
-1. Extract all explicitly requested skills from the job posting
-2. Extract all skills mentioned in the candidate's resume
-3. Identify matching skills
-4. Identify missing skills (requested but not found)
-5. Identify additional skills (candidate has but not requested)
-6. Explain skill gaps and problems
-7. Provide skill development recommendations
+Твоя задача:
+1. Выделить навыки, явно запрошенные в вакансии
+2. Выделить навыки, указанные в резюме кандидата
+3. Определить совпадающие навыки
+4. Определить отсутствующие навыки (запрошены, но не найдены)
+5. Определить дополнительные навыки (есть у кандидата, но не запрошены)
+6. Объяснить пробелы в навыках и проблемы
+7. Дать рекомендации по развитию навыков
 
-Focus ONLY on technical and professional skills. Consider:
-- Required vs. nice-to-have skills
-- Skill level requirements
-- Technology stack alignment
-- Industry-specific skills
+Фокус только на профессиональных и технических навыках. Учитывай:
+- Обязательные и желательные навыки
+- Требуемый уровень
+- Соответствие технологического стека
+- Отраслевые навыки
 
-Respond in this EXACT JSON format:
+Ответь строго в формате JSON:
 {
-  "requestedSkills": ["skill1", "skill2", "skill3"],
-  "candidateSkills": ["skill1", "skill2", "skill3"],
-  "matchingSkills": ["skill1", "skill2"],
-  "missingSkills": ["missing1", "missing2"],
-  "additionalSkills": ["extra1", "extra2"],
+  "requestedSkills": ["навык1", "навык2", "навык3"],
+  "candidateSkills": ["навык1", "навык2", "навык3"],
+  "matchingSkills": ["навык1", "навык2"],
+  "missingSkills": ["отсутствует1", "отсутствует2"],
+  "additionalSkills": ["доп1", "доп2"],
   "matchScore": 0-100,
-  "explanation": "detailed explanation of skills alignment",
-  "problems": ["problem1", "problem2"],
-  "recommendations": ["recommendation1", "recommendation2"]
+  "explanation": "подробное объяснение соответствия навыков",
+  "problems": ["проблема1", "проблема2"],
+  "recommendations": ["рекомендация1", "рекомендация2"]
 }
 `;
 
@@ -174,43 +179,45 @@ Respond in this EXACT JSON format:
    * Analyze experience with seniority and quantity assessment
    */
   private async analyzeExperience(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<ExperienceAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
-Analyze the WORK EXPERIENCE match between this resume and job posting with seniority assessment.
+Проанализируй соответствие ОПЫТА РАБОТЫ между резюме и вакансией с оценкой уровня (seniority).
 
-RESUME:
-${resume.text}
+РЕЗЮМЕ:
+${resumeText}
 
-JOB POSTING:
-${jobPost.text}
+ВАКАНСИЯ:
+${jobText}
 
-Your task is to:
-1. Extract what the candidate has done (past experience)
-2. Extract what the job requires them to do (future responsibilities)
-3. Evaluate experience quantity and quality match
-4. Assess seniority level match (under-qualified, perfect-match, over-qualified)
-5. Explain experience alignment and gaps
-6. Provide experience development recommendations
+Твоя задача:
+1. Выделить, что кандидат делал раньше (опыт)
+2. Выделить, что требуется делать в вакансии (обязанности)
+3. Оценить соответствие по количеству и качеству опыта
+4. Оценить соответствие уровня (under-qualified, perfect-match, over-qualified)
+5. Объяснить соответствие и пробелы
+6. Дать рекомендации по развитию опыта
 
-Consider:
-- Years of relevant experience
-- Responsibility level and scope
-- Industry experience relevance
-- Achievement quality and impact
-- Leadership/management experience
-- Career progression
+Учитывай:
+- Годы релевантного опыта
+- Уровень ответственности и масштаб
+- Релевантность индустрии
+- Качество достижений и влияние
+- Лидерский/управленческий опыт
+- Карьерный рост
 
-Respond in this EXACT JSON format:
+Ответь строго в формате JSON:
 {
-  "candidateExperience": ["experience1", "experience2", "experience3"],
-  "jobRequirements": ["requirement1", "requirement2", "requirement3"],
+  "candidateExperience": ["опыт1", "опыт2", "опыт3"],
+  "jobRequirements": ["требование1", "требование2", "требование3"],
   "experienceMatch": 0-100,
   "seniorityMatch": "under-qualified" | "perfect-match" | "over-qualified",
-  "seniorityExplanation": "detailed explanation of seniority assessment",
+  "seniorityExplanation": "подробное объяснение оценки уровня",
   "quantityMatch": 0-100,
-  "quantityExplanation": "explanation of experience quantity assessment",
-  "explanation": "detailed explanation of experience alignment",
-  "problems": ["problem1", "problem2"],
-  "recommendations": ["recommendation1", "recommendation2"]
+  "quantityExplanation": "объяснение количественной оценки",
+  "explanation": "подробное объяснение соответствия опыта",
+  "problems": ["проблема1", "проблема2"],
+  "recommendations": ["рекомендация1", "рекомендация2"]
 }
 `;
 
@@ -222,55 +229,57 @@ Respond in this EXACT JSON format:
    * Analyze job conditions compatibility
    */
   private async analyzeJobConditions(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<JobConditionsAnalysis | null> {
+    const resumeText = this.truncateText(resume.text);
+    const jobText = this.truncateText(jobPost.text);
     const prompt = `
-Analyze JOB CONDITIONS compatibility between this resume and job posting.
+Проанализируй СОВМЕСТИМОСТЬ УСЛОВИЙ РАБОТЫ между резюме и вакансией.
 
-RESUME:
-${resume.text}
+РЕЗЮМЕ:
+${resumeText}
 
-JOB POSTING:
-${jobPost.text}
+ВАКАНСИЯ:
+${jobText}
 
-Your task is to extract and compare:
-1. Location requirements vs candidate location
-2. Salary range vs candidate expectations (if mentioned)
-3. Work schedule vs candidate preferences
-4. Work format (remote/hybrid/onsite) vs candidate preferences
+Нужно выделить и сравнить:
+1. Требования к локации vs локация кандидата
+2. Вилка зарплаты vs ожидания кандидата (если упомянуто)
+3. График работы vs предпочтения кандидата
+4. Формат работы (удалённо/гибрид/офис) vs предпочтения кандидата
 
-Look for explicit mentions of:
-- Geographic location, city, country
-- Salary ranges, compensation expectations
-- Working hours, schedule flexibility
-- Remote work policies, office requirements
+Ищи явные упоминания:
+- География: город, страна
+- Вилки зарплат, ожидания по компенсации
+- Часы работы, гибкость графика
+- Политики удалённой работы, требования посещения офиса
 
-Respond in this EXACT JSON format:
+Ответь строго в формате JSON:
 {
   "location": {
-    "jobLocation": "location from job posting",
-    "candidateLocation": "location from resume",
+    "jobLocation": "локация из вакансии",
+    "candidateLocation": "локация из резюме",
     "compatible": true/false,
-    "explanation": "explanation of location compatibility"
+    "explanation": "объяснение совместимости по локации"
   },
   "salary": {
-    "jobSalary": "salary range from job posting",
-    "candidateExpectation": "salary expectation from resume",
+    "jobSalary": "вилка зарплаты из вакансии",
+    "candidateExpectation": "ожидания по зарплате из резюме",
     "compatible": true/false,
-    "explanation": "explanation of salary compatibility"
+    "explanation": "объяснение совместимости по зарплате"
   },
   "schedule": {
-    "jobSchedule": "schedule from job posting",
-    "candidatePreference": "schedule preference from resume",
+    "jobSchedule": "график из вакансии",
+    "candidatePreference": "предпочтения по графику из резюме",
     "compatible": true/false,
-    "explanation": "explanation of schedule compatibility"
+    "explanation": "объяснение совместимости по графику"
   },
   "workFormat": {
-    "jobFormat": "work format from job posting",
-    "candidatePreference": "work format preference from resume",
+    "jobFormat": "формат работы из вакансии",
+    "candidatePreference": "предпочтения по формату из резюме",
     "compatible": true/false,
-    "explanation": "explanation of work format compatibility"
+    "explanation": "объяснение совместимости по формату"
   },
   "overallScore": 0-100,
-  "explanation": "overall job conditions assessment"
+  "explanation": "общая оценка условий"
 }
 `;
 
@@ -296,13 +305,15 @@ Respond in this EXACT JSON format:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert HR professional and resume analyst. Always respond with valid JSON only. Be thorough and specific in your analysis.'
+              content: 'Ты эксперт по HR и анализу резюме. Отвечай ТОЛЬКО валидным JSON без лишнего текста. Будь подробным и конкретным.'
             },
             {
               role: 'user',
               content: prompt
             }
           ],
+          // Prefer JSON mode when supported by the model
+          ...(this.supportsJsonMode() ? { response_format: { type: 'json_object' } } : {}),
           max_tokens: this.maxTokens,
           temperature: this.temperature,
         }),
@@ -322,21 +333,71 @@ Respond in this EXACT JSON format:
         return null;
       }
 
-      // Parse JSON response with error handling
-      try {
-        const result = JSON.parse(content);
+      // Parse JSON response with error handling and code-fence support
+      const parsed = this.parseJsonContent(content, category);
+      if (parsed !== null) {
         console.log(`Successfully parsed ${category} analysis result`);
-        return result;
-      } catch (parseError) {
-        console.error(`Failed to parse JSON for ${category}:`, parseError);
-        console.error('Raw content:', content);
-        return null;
+        return parsed;
       }
+      return null;
 
     } catch (error) {
       console.error(`Error in ${category} analysis:`, error);
       return null;
     }
+  }
+
+  /**
+   * Attempt to parse JSON from model output, handling code fences and extra text
+   */
+  private parseJsonContent(content: string, category: string): any | null {
+    // Fast path
+    try {
+      return JSON.parse(content);
+    } catch {}
+
+    // Strip code fences if present
+    const fencedMatch = content.match(/```(?:json)?\n([\s\S]*?)\n```/i);
+    if (fencedMatch && fencedMatch[1]) {
+      try {
+        return JSON.parse(fencedMatch[1]);
+      } catch (err) {
+        console.error(`JSON parse failed for ${category} after removing code fences:`);
+      }
+    }
+
+    // Try to extract the largest JSON object substring
+    const firstBrace = content.indexOf('{');
+    const lastBrace = content.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonSlice = content.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(jsonSlice);
+      } catch (err) {
+        console.error(`JSON slice parse failed for ${category}. Slice length: ${jsonSlice.length}`);
+      }
+    }
+
+    console.error(`Failed to parse JSON for ${category}. Content preview:`, content.slice(0, 500));
+    return null;
+  }
+
+  /**
+   * Whether the current model supports response_format: json_object
+   */
+  private supportsJsonMode(): boolean {
+    const m = (this.model || '').toLowerCase();
+    return m.includes('gpt-4o') || m.includes('4.1') || m.includes('o3') || m.includes('mini');
+  }
+
+  /**
+   * Truncate very long inputs to reduce token usage and avoid API errors
+   */
+  private truncateText(text: string): string {
+    if (!text) return '';
+    if (text.length <= this.maxInputChars) return text;
+    const truncated = text.slice(0, this.maxInputChars);
+    return `${truncated}`;
   }
 
   /**
@@ -353,23 +414,23 @@ Respond in this EXACT JSON format:
 
     // Overall assessment
     if (overallScore >= 85) {
-      summary = '🎉 EXCELLENT MATCH! This candidate is highly suitable for this position.';
+      summary = '🎉 ОТЛИЧНОЕ СОВПАДЕНИЕ! Кандидат очень хорошо подходит на эту позицию.';
     } else if (overallScore >= 70) {
-      summary = '👍 STRONG MATCH! This candidate shows good alignment with the role.';
+      summary = '👍 СИЛЬНОЕ СОВПАДЕНИЕ! Кандидат хорошо соответствует роли.';
     } else if (overallScore >= 55) {
-      summary = '⚠️ MODERATE MATCH. Some areas need attention but candidate has potential.';
+      summary = '⚠️ СРЕДНЕЕ СОВПАДЕНИЕ. Есть зоны для улучшения, но потенциал есть.';
     } else if (overallScore >= 40) {
-      summary = '❌ WEAK MATCH. Significant gaps need to be addressed.';
+      summary = '❌ СЛАБОЕ СОВПАДЕНИЕ. Требуются существенные корректировки.';
     } else {
-      summary = '🚫 POOR MATCH. This candidate is not suitable for this position.';
+      summary = '🚫 НИЗКОЕ СОВПАДЕНИЕ. Кандидат не подходит для этой позиции.';
     }
 
     // Detailed breakdown
-    summary += `\n\n📊 **DETAILED BREAKDOWN:**`;
-    summary += `\n• **Headlines**: ${headlines.matchScore}/100 - ${headlines.explanation}`;
-    summary += `\n• **Skills**: ${skills.matchScore}/100 - ${skills.missingSkills.length} missing skills`;
-    summary += `\n• **Experience**: ${experience.experienceMatch}/100 - ${experience.seniorityMatch}`;
-    summary += `\n• **Conditions**: ${conditions.overallScore}/100 - Location, salary, schedule compatibility`;
+    summary += `\n\n📊 **ПОДРОБНЫЙ РАЗБОР:**`;
+    summary += `\n• **Заголовки**: ${headlines.matchScore}/100 - ${headlines.explanation}`;
+    summary += `\n• **Навыки**: ${skills.matchScore}/100 - отсутствует навыков: ${skills.missingSkills.length}`;
+    summary += `\n• **Опыт**: ${experience.experienceMatch}/100 - ${experience.seniorityMatch}`;
+    summary += `\n• **Условия**: ${conditions.overallScore}/100 - локация, зарплата, график`;
 
     // Top problems
     const allProblems = [
@@ -379,7 +440,7 @@ Respond in this EXACT JSON format:
     ];
     
     if (allProblems.length > 0) {
-      summary += `\n\n🚨 **KEY ISSUES:**`;
+      summary += `\n\n🚨 **КЛЮЧЕВЫЕ ПРОБЛЕМЫ:**`;
       allProblems.slice(0, 3).forEach(problem => {
         summary += `\n• ${problem}`;
       });
@@ -393,7 +454,7 @@ Respond in this EXACT JSON format:
     ];
     
     if (allRecommendations.length > 0) {
-      summary += `\n\n💡 **RECOMMENDATIONS:**`;
+      summary += `\n\n💡 **РЕКОМЕНДАЦИИ:**`;
       allRecommendations.slice(0, 3).forEach(rec => {
         summary += `\n• ${rec}`;
       });

@@ -101,8 +101,29 @@ export class WebhookHandler {
 
       // Handle callback query updates (for inline keyboards)
       if (update.callback_query) {
-        // TODO: Implement callback query handling if needed
-        console.log('Callback query received:', update.callback_query);
+        try {
+          const data = update.callback_query.data || '';
+          const chatId = update.callback_query.message?.chat.id;
+          const userId = update.callback_query.from.id;
+
+          if (!chatId || !userId) return;
+
+          if (data === 'resume_done') {
+            await this.conversationHandler['sessionService'].updateState(userId, 'waiting_job_post');
+            await this.conversationHandler['telegramService'].sendMessage({
+              chat_id: chatId,
+              text: '✅ Спасибо! Я получил ваше резюме. Теперь пришлите текст вакансии (можно в одном или нескольких сообщениях).',
+            });
+          } else if (data === 'cancel') {
+            await this.conversationHandler['sessionService'].completeSession(userId);
+            await this.conversationHandler['telegramService'].sendMessage({
+              chat_id: chatId,
+              text: '✅ Процесс отменён. Вы можете начать заново командой /resume_and_job_post_match',
+            });
+          }
+        } catch (e) {
+          console.error('Error handling callback query:', e);
+        }
         return;
       }
 
