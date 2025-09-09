@@ -11,6 +11,7 @@ import {
   ExperienceAnalysis, 
   JobConditionsAnalysis 
 } from '../types/session';
+import { getStrings, formatTemplate } from '../i18n';
 
 export class EnhancedAIService {
   private apiKey: string;
@@ -90,38 +91,8 @@ export class EnhancedAIService {
   private async analyzeHeadlines(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<HeadlineAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
-    const prompt = `
-Проанализируй соответствие НАЗВАНИЯ ВАКАНСИИ и ДОЛЖНОСТЕЙ в резюме и вакансии.
-
-РЕЗЮМЕ:
-${resumeText}
-
-ВАКАНСИЯ:
-${jobText}
-
-Твоя задача:
-1. Выделить основное название вакансии
-2. Выделить все должности из резюме кандидата
-3. Оценить, насколько хорошо совпадают названия
-4. Указать конкретные проблемы соответствия
-5. Дать рекомендации
-
-Фокус только на названиях должностей. Учитывай:
-- Иерархию и уровень seniority
-- Соответствие терминологии в индустрии
-- Близость по функциям роли
-- Карьерное развитие в названиях
-
-Ответь строго в формате JSON:
-{
-  "jobTitle": "точное название из вакансии",
-  "candidateTitles": ["должность1", "должность2", "должность3"],
-  "matchScore": 0-100,
-  "explanation": "подробное объяснение соответствия названий",
-  "problems": ["проблема1", "проблема2"],
-  "recommendations": ["рекомендация1", "рекомендация2"]
-}
-`;
+    const strings = getStrings();
+    const prompt = formatTemplate(strings.prompts.headlines, { resume: resumeText, job: jobText });
 
     const result = await this.callGPT(prompt, 'headlines');
     return result as HeadlineAnalysis | null;
@@ -133,43 +104,8 @@ ${jobText}
   private async analyzeSkills(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<SkillsAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
-    const prompt = `
-Проанализируй соответствие НАВЫКОВ между резюме и вакансией с подробной структурой.
-
-РЕЗЮМЕ:
-${resumeText}
-
-ВАКАНСИЯ:
-${jobText}
-
-Твоя задача:
-1. Выделить навыки, явно запрошенные в вакансии
-2. Выделить навыки, указанные в резюме кандидата
-3. Определить совпадающие навыки
-4. Определить отсутствующие навыки (запрошены, но не найдены)
-5. Определить дополнительные навыки (есть у кандидата, но не запрошены)
-6. Объяснить пробелы в навыках и проблемы
-7. Дать рекомендации по развитию навыков
-
-Фокус только на профессиональных и технических навыках. Учитывай:
-- Обязательные и желательные навыки
-- Требуемый уровень
-- Соответствие технологического стека
-- Отраслевые навыки
-
-Ответь строго в формате JSON:
-{
-  "requestedSkills": ["навык1", "навык2", "навык3"],
-  "candidateSkills": ["навык1", "навык2", "навык3"],
-  "matchingSkills": ["навык1", "навык2"],
-  "missingSkills": ["отсутствует1", "отсутствует2"],
-  "additionalSkills": ["доп1", "доп2"],
-  "matchScore": 0-100,
-  "explanation": "подробное объяснение соответствия навыков",
-  "problems": ["проблема1", "проблема2"],
-  "recommendations": ["рекомендация1", "рекомендация2"]
-}
-`;
+    const strings = getStrings();
+    const prompt = formatTemplate(strings.prompts.skills, { resume: resumeText, job: jobText });
 
     const result = await this.callGPT(prompt, 'skills');
     return result as SkillsAnalysis | null;
@@ -181,45 +117,8 @@ ${jobText}
   private async analyzeExperience(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<ExperienceAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
-    const prompt = `
-Проанализируй соответствие ОПЫТА РАБОТЫ между резюме и вакансией с оценкой уровня (seniority).
-
-РЕЗЮМЕ:
-${resumeText}
-
-ВАКАНСИЯ:
-${jobText}
-
-Твоя задача:
-1. Выделить, что кандидат делал раньше (опыт)
-2. Выделить, что требуется делать в вакансии (обязанности)
-3. Оценить соответствие по количеству и качеству опыта
-4. Оценить соответствие уровня (under-qualified, perfect-match, over-qualified)
-5. Объяснить соответствие и пробелы
-6. Дать рекомендации по развитию опыта
-
-Учитывай:
-- Годы релевантного опыта
-- Уровень ответственности и масштаб
-- Релевантность индустрии
-- Качество достижений и влияние
-- Лидерский/управленческий опыт
-- Карьерный рост
-
-Ответь строго в формате JSON:
-{
-  "candidateExperience": ["опыт1", "опыт2", "опыт3"],
-  "jobRequirements": ["требование1", "требование2", "требование3"],
-  "experienceMatch": 0-100,
-  "seniorityMatch": "under-qualified" | "perfect-match" | "over-qualified",
-  "seniorityExplanation": "подробное объяснение оценки уровня",
-  "quantityMatch": 0-100,
-  "quantityExplanation": "объяснение количественной оценки",
-  "explanation": "подробное объяснение соответствия опыта",
-  "problems": ["проблема1", "проблема2"],
-  "recommendations": ["рекомендация1", "рекомендация2"]
-}
-`;
+    const strings = getStrings();
+    const prompt = formatTemplate(strings.prompts.experience, { resume: resumeText, job: jobText });
 
     const result = await this.callGPT(prompt, 'experience');
     return result as ExperienceAnalysis | null;
@@ -231,57 +130,8 @@ ${jobText}
   private async analyzeJobConditions(resume: ProcessedDocument, jobPost: ProcessedDocument): Promise<JobConditionsAnalysis | null> {
     const resumeText = this.truncateText(resume.text);
     const jobText = this.truncateText(jobPost.text);
-    const prompt = `
-Проанализируй СОВМЕСТИМОСТЬ УСЛОВИЙ РАБОТЫ между резюме и вакансией.
-
-РЕЗЮМЕ:
-${resumeText}
-
-ВАКАНСИЯ:
-${jobText}
-
-Нужно выделить и сравнить:
-1. Требования к локации vs локация кандидата
-2. Вилка зарплаты vs ожидания кандидата (если упомянуто)
-3. График работы vs предпочтения кандидата
-4. Формат работы (удалённо/гибрид/офис) vs предпочтения кандидата
-
-Ищи явные упоминания:
-- География: город, страна
-- Вилки зарплат, ожидания по компенсации
-- Часы работы, гибкость графика
-- Политики удалённой работы, требования посещения офиса
-
-Ответь строго в формате JSON:
-{
-  "location": {
-    "jobLocation": "локация из вакансии",
-    "candidateLocation": "локация из резюме",
-    "compatible": true/false,
-    "explanation": "объяснение совместимости по локации"
-  },
-  "salary": {
-    "jobSalary": "вилка зарплаты из вакансии",
-    "candidateExpectation": "ожидания по зарплате из резюме",
-    "compatible": true/false,
-    "explanation": "объяснение совместимости по зарплате"
-  },
-  "schedule": {
-    "jobSchedule": "график из вакансии",
-    "candidatePreference": "предпочтения по графику из резюме",
-    "compatible": true/false,
-    "explanation": "объяснение совместимости по графику"
-  },
-  "workFormat": {
-    "jobFormat": "формат работы из вакансии",
-    "candidatePreference": "предпочтения по формату из резюме",
-    "compatible": true/false,
-    "explanation": "объяснение совместимости по формату"
-  },
-  "overallScore": 0-100,
-  "explanation": "общая оценка условий"
-}
-`;
+    const strings = getStrings();
+    const prompt = formatTemplate(strings.prompts.conditions, { resume: resumeText, job: jobText });
 
     const result = await this.callGPT(prompt, 'conditions');
     return result as JobConditionsAnalysis | null;
@@ -293,6 +143,7 @@ ${jobText}
   private async callGPT(prompt: string, category: string): Promise<any | null> {
     try {
       console.log(`Making GPT API call for ${category} analysis...`);
+      const strings = getStrings();
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -305,7 +156,7 @@ ${jobText}
           messages: [
             {
               role: 'system',
-              content: 'Ты эксперт по HR и анализу резюме. Отвечай ТОЛЬКО валидным JSON без лишнего текста. Будь подробным и конкретным.'
+              content: strings.prompts.system
             },
             {
               role: 'user',
