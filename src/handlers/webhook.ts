@@ -8,16 +8,16 @@ import { LoggingService } from '../services/logging';
 
 export class WebhookHandler {
   private conversationHandler: ConversationHandler;
-  private webhookSecret: string | undefined;
+  // TODO: Re-add webhookSecret property when validation is re-enabled
   private loggingService: LoggingService | undefined;
 
   constructor(
     conversationHandler: ConversationHandler,
-    webhookSecret?: string,
+    _webhookSecret?: string, // TODO: Remove underscore when webhook validation is re-enabled
     loggingService?: LoggingService
   ) {
     this.conversationHandler = conversationHandler;
-    this.webhookSecret = webhookSecret;
+    // TODO: Re-enable: this.webhookSecret = webhookSecret;
     this.loggingService = loggingService;
   }
 
