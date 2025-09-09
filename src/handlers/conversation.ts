@@ -9,12 +9,15 @@ import { DocumentService } from '../services/document';
 import { AIService } from '../services/ai';
 import { EnhancedAIService } from '../services/enhanced-ai';
 import { LoggingService } from '../services/logging';
+import { UserRequestManager } from '../services/request-manager';
 import {
   EnhancedAnalysis,
   HeadlineAnalysis,
   SkillsAnalysis,
   ExperienceAnalysis,
   JobConditionsAnalysis,
+  UserRequest,
+  ProcessedDocument,
 } from '../types/session';
 
 export class ConversationHandler {
@@ -23,6 +26,7 @@ export class ConversationHandler {
   private documentService: DocumentService;
   private enhancedAIService: EnhancedAIService;
   private loggingService: LoggingService;
+  private requestManager: UserRequestManager;
   private environment: string;
   private adminPassword: string;
 
@@ -33,6 +37,7 @@ export class ConversationHandler {
     _aiService: AIService, // Keep parameter for backwards compatibility
     enhancedAIService: EnhancedAIService,
     loggingService: LoggingService,
+    requestManager: UserRequestManager,
     environment: string = 'development',
     adminPassword: string = 'defaultpassword'
   ) {
@@ -42,6 +47,7 @@ export class ConversationHandler {
     // aiService parameter kept for backwards compatibility but not stored
     this.enhancedAIService = enhancedAIService;
     this.loggingService = loggingService;
+    this.requestManager = requestManager;
     this.environment = environment;
     this.adminPassword = adminPassword;
   }
@@ -92,41 +98,46 @@ export class ConversationHandler {
     });
 
     try {
-      // Get or create session
+      // Get or create user request (new architecture)
+      let activeRequest = await this.requestManager.getUserActiveRequest(userId);
+      
+      // Keep session for backward compatibility (some admin features may still use it)
       let session = await this.sessionService.getSession(userId);
       if (!session) {
-        await this.loggingService.log(
-          'INFO',
-          'NEW_SESSION',
-          'Creating new session for user',
-          { userId, chatId }
-        );
         session = this.sessionService.createSession(
           userId,
           chatId,
           message.from?.language_code
         );
         await this.sessionService.saveSession(session);
-      } else {
-        await this.loggingService.log(
-          'DEBUG',
-          'SESSION_FOUND',
-          `Found existing session in state: ${session.state}`,
-          {
-            userId,
-            chatId,
-            currentState: session.state,
-            sessionAge:
-              new Date().getTime() - new Date(session.createdAt).getTime(),
-          }
-        );
       }
 
-      // Handle different message types based on session state
+      // Determine conversation state from request or session
+      let conversationState: string = 'idle';
+      if (activeRequest) {
+        conversationState = this.getConversationStateFromRequest(activeRequest);
+      } else if (session) {
+        conversationState = session.state;
+      }
+
+      await this.loggingService.log(
+        'DEBUG',
+        'CONVERSATION_STATE',
+        `Current conversation state: ${conversationState}`,
+        {
+          userId,
+          chatId,
+          conversationState,
+          hasActiveRequest: !!activeRequest,
+          requestId: activeRequest?.id
+        }
+      );
+
+      // Handle different message types based on conversation state
       if (message.text) {
-        await this.handleTextMessage(message, session.state);
+        await this.handleTextMessage(message, conversationState, activeRequest);
       } else if (message.document) {
-        await this.handleDocumentMessage(message, session.state);
+        await this.handleDocumentMessage(message, conversationState, activeRequest);
       } else {
         await this.loggingService.log(
           'WARN',
@@ -155,11 +166,37 @@ export class ConversationHandler {
   }
 
   /**
+   * Convert request status to conversation state for backward compatibility
+   */
+  private getConversationStateFromRequest(request: UserRequest): string {
+    if (request.status === 'collecting') {
+      const documents = request.documentIds;
+      const hasResume = documents.some(docId => docId.includes('resume') || docId.includes('doc'));
+      const hasJobPost = documents.some(docId => docId.includes('job') || docId.includes('post'));
+      
+      if (!hasResume && !hasJobPost) {
+        return 'waiting_resume';
+      } else if (hasResume && !hasJobPost) {
+        return 'waiting_job_post';
+      } else {
+        return 'processing';
+      }
+    } else if (request.status === 'processing') {
+      return 'processing';
+    } else if (request.status === 'completed') {
+      return 'completed';
+    } else {
+      return 'idle';
+    }
+  }
+
+  /**
    * Handle text messages
    */
   private async handleTextMessage(
     message: TelegramMessage,
-    currentState: string
+    currentState: string,
+    _activeRequest?: UserRequest | null
   ): Promise<void> {
     const chatId = message.chat.id;
     const userId = message.from!.id;
@@ -216,7 +253,8 @@ export class ConversationHandler {
    */
   private async handleDocumentMessage(
     message: TelegramMessage,
-    currentState: string
+    currentState: string,
+    activeRequest?: UserRequest | null
   ): Promise<void> {
     const chatId = message.chat.id;
     const userId = message.from!.id;
@@ -234,7 +272,16 @@ export class ConversationHandler {
     }
 
     try {
-      // Download and process document
+      // Get or create request
+      if (!activeRequest) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: '❌ Сначала начните процесс анализа командой /resume_and_job_post_match',
+        });
+        return;
+      }
+
+      // Download file
       const fileInfo = await this.telegramService.getFile(document.file_id);
       if (!fileInfo?.file_path) {
         throw new Error('Не удалось получить информацию о файле');
@@ -247,45 +294,49 @@ export class ConversationHandler {
         throw new Error('Не удалось скачать файл');
       }
 
-      const processedDocument = await this.documentService.processDocument(
+      // Determine document type based on conversation state
+      const documentType: 'resume' | 'job_post' = 
+        currentState === 'waiting_resume' ? 'resume' : 'job_post';
+
+      // Process document through request pipeline
+      const documentRef = await this.requestManager.addDocument(
+        activeRequest.id,
+        documentType,
         fileContent,
         document.file_name,
         document.mime_type
       );
 
-      if (!processedDocument) {
-        throw new Error('Не удалось обработать документ');
-      }
+      // Update session for backward compatibility
+      const processedDocument: ProcessedDocument = {
+        fileName: documentRef.originalName,
+        mimeType: documentRef.originalMimeType,
+        text: documentRef.text,
+        wordCount: documentRef.wordCount,
+        processedAt: documentRef.processedAt
+      };
 
-      const validation =
-        this.documentService.validateDocument(processedDocument);
-      if (!validation.isValid) {
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
-          text: `❌ ${validation.error}`,
-        });
-        return;
-      }
-
-      // Save document to session
       if (currentState === 'waiting_resume') {
         await this.sessionService.addResume(userId, processedDocument);
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '✅ Resume file received. You can upload more files or paste more resume text. When finished, confirm below:',
+          text: `✅ Резюме загружено и обработано\n📄 Извлечено ${documentRef.wordCount} слов из ${documentRef.originalName}\n🆔 Документ: ${documentRef.id.slice(-8)}\n\nВы можете загрузить дополнительные файлы или вставить текст. Когда завершите, подтвердите ниже:`,
           reply_markup: {
             inline_keyboard: [
               [
-                { text: '✅ Done with resume', callback_data: 'resume_done' },
-                { text: '❌ Cancel', callback_data: 'cancel' },
+                { text: '✅ Готово с резюме', callback_data: 'resume_done' },
+                { text: '❌ Отмена', callback_data: 'cancel' },
               ],
             ],
           },
         });
       } else if (currentState === 'waiting_job_post') {
-        // In the explicit-confirmation flow, any content here is treated as job post
         await this.sessionService.addJobPost(userId, processedDocument);
-        await this.startAnalysis(chatId, userId);
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: `✅ Описание вакансии загружено и обработано\n📄 Извлечено ${documentRef.wordCount} слов из ${documentRef.originalName}\n🆔 Документ: ${documentRef.id.slice(-8)}\n\n🔄 Начинаю анализ...`,
+        });
+        // Analysis will be triggered automatically by request manager
       }
     } catch (error) {
       console.error('Error processing document:', error);
@@ -368,17 +419,42 @@ export class ConversationHandler {
   }
 
   /**
-   * Start the matching process
+   * Start the matching process (updated for request-based architecture)
    */
   private async startMatchingProcess(
     chatId: number,
     userId: number
   ): Promise<void> {
-    await this.sessionService.updateState(userId, 'waiting_resume');
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
-      text: '📄 Я помогу проанализировать, насколько ваше резюме соответствует вакансии!\n\nПожалуйста, отправьте своё резюме. Можно:\n• Прикрепить файл или вставить текст в нескольких сообщениях\n\nКогда завершите отправку всех частей резюме, нажмите кнопку ниже «Готово с резюме» или напишите: \n\n✅ готово\n\nПосле этого я попрошу отправить текст вакансии.',
-    });
+    try {
+      // Create new request
+      const request = await this.requestManager.createRequest(
+        userId,
+        chatId,
+        // Get language from session if available
+        (await this.sessionService.getSession(userId))?.language
+      );
+
+      // Update session state for backward compatibility
+      await this.sessionService.updateState(userId, 'waiting_resume');
+      
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `📄 Я помогу проанализировать, насколько ваше резюме соответствует вакансии!\n\n🆔 Запрос: ${request.id.slice(-8)}\n\nПожалуйста, отправьте своё резюме. Можно:\n• Прикрепить PDF или DOCX файл\n• Вставить текст в нескольких сообщениях\n\nКогда завершите отправку всех частей резюме, нажмите кнопку ниже «Готово с резюме» или напишите: \n\n✅ готово\n\nПосле этого я попрошу отправить текст вакансии.`,
+      });
+
+      await this.loggingService.log(
+        'INFO',
+        'MATCHING_PROCESS_STARTED',
+        'New matching process started',
+        { requestId: request.id, userId, chatId }
+      );
+    } catch (error) {
+      console.error('Error starting matching process:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Не удалось начать процесс анализа. Пожалуйста, попробуйте позже.',
+      });
+    }
   }
 
   /**
@@ -885,17 +961,37 @@ SPIN-продажи
   }
 
   /**
-   * Cancel current process
+   * Cancel current process (updated for request-based architecture)
    */
   private async cancelCurrentProcess(
     chatId: number,
     userId: number
   ): Promise<void> {
-    await this.sessionService.completeSession(userId);
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
-      text: '✅ Процесс отменён. Вы можете начать новый анализ в любое время командой /resume_and_job_post_match',
-    });
+    try {
+      // Cancel active request if exists
+      const activeRequest = await this.requestManager.getUserActiveRequest(userId);
+      if (activeRequest) {
+        await this.requestManager.cancelRequest(activeRequest.id);
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: `✅ Запрос ${activeRequest.id.slice(-8)} отменён. Вы можете начать новый анализ в любое время командой /resume_and_job_post_match`,
+        });
+      } else {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: '✅ Процесс отменён. Вы можете начать новый анализ в любое время командой /resume_and_job_post_match',
+        });
+      }
+
+      // Also complete session for backward compatibility
+      await this.sessionService.completeSession(userId);
+    } catch (error) {
+      console.error('Error cancelling process:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Ошибка при отмене процесса. Попробуйте начать новый анализ командой /resume_and_job_post_match',
+      });
+    }
   }
 
   /**

@@ -48,11 +48,7 @@ export interface Env {
   OPENAI_ORG_ID?: string;
 
   // 🆕 NEW Cloudflare Workers AI Configuration
-  AI?: {
-    toMarkdown(
-      documents: Array<{ name: string; blob: Blob }>
-    ): Promise<Array<{ markdown: string }>>;
-  };
+  AI?: any;
 
   // 🔄 EXISTING + NEW Admin Configuration
   ADMIN_PASSWORD?: string;
@@ -189,6 +185,112 @@ export default {
             headers: { 'Content-Type': 'application/json' },
           }
         );
+      }
+
+      // Test document processing pipeline endpoint
+      if (url.pathname === '/test-document-pipeline') {
+        try {
+          console.log('🧪 Testing document processing pipeline...');
+
+          const services = await initializeServices(env);
+          const pipeline = await services.container.get('documentPipeline');
+
+          if (!pipeline) {
+            return new Response(
+              JSON.stringify({
+                error: 'Pipeline not found',
+                message: 'Document processing pipeline is not initialized',
+                timestamp: new Date().toISOString(),
+              }),
+              {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          }
+
+          // Test pipeline health
+          const health = await (pipeline as any).healthCheck();
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: 'Document processing pipeline status',
+              health,
+              aiAvailable: !!env.AI,
+              timestamp: new Date().toISOString(),
+            }),
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        } catch (error) {
+          console.error('❌ Pipeline test failed:', error);
+          return new Response(
+            JSON.stringify({
+              error: 'Pipeline test failed',
+              message: error instanceof Error ? error.message : String(error),
+              timestamp: new Date().toISOString(),
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      }
+
+      // Test AI functionality endpoint
+      if (url.pathname === '/test-ai') {
+        try {
+          console.log('🧪 Testing Workers AI functionality...');
+
+          // Test AI availability
+          if (!env.AI) {
+            return new Response(
+              JSON.stringify({
+                error: 'AI binding not available',
+                message: 'Workers AI is not configured for this environment',
+                timestamp: new Date().toISOString(),
+              }),
+              {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          }
+
+          // Test AI functionality with a simple text generation
+          const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+            prompt: 'Say "Hello from Cloudflare Workers AI!" and confirm you can process text.',
+            max_tokens: 100,
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: 'Workers AI is working!',
+              ai_response: aiResponse,
+              timestamp: new Date().toISOString(),
+            }),
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        } catch (error) {
+          console.error('❌ AI test failed:', error);
+          return new Response(
+            JSON.stringify({
+              error: 'AI test failed',
+              message: error instanceof Error ? error.message : String(error),
+              timestamp: new Date().toISOString(),
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
 
       // Fix webhook endpoint

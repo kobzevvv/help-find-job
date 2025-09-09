@@ -21,8 +21,8 @@ export interface UserSession {
 }
 
 export interface ProcessedDocument {
-  fileName?: string;
-  mimeType?: string;
+  fileName?: string | undefined;
+  mimeType?: string | undefined;
   text: string;
   wordCount: number;
   processedAt: string;
@@ -118,4 +118,130 @@ export interface EnhancedAnalysis {
   jobConditions: JobConditionsAnalysis;
   summary: string;
   processedAt: string;
+}
+
+// =============================================================================
+// Request-Based Architecture (Iteration 2)
+// =============================================================================
+
+/**
+ * Represents a complete user request for document matching
+ * Contains multiple documents and tracks processing state
+ */
+export interface UserRequest {
+  id: string; // "request-123456"
+  userId: number;
+  chatId: number;
+  createdAt: string;
+  status: 'collecting' | 'processing' | 'completed' | 'error';
+  
+  // Documents associated with this request
+  documentIds: string[]; // References to DocumentReference.id
+  
+  // Processing results
+  analysis?: EnhancedAnalysis;
+  processedAt?: string;
+  
+  // Request metadata
+  lastActivity: string;
+  language?: string | undefined;
+}
+
+/**
+ * Represents a single document within a user request
+ * Supports both original document info and processed results
+ */
+export interface DocumentReference {
+  id: string; // "doc-789012"
+  requestId: string; // Links back to UserRequest.id
+  type: 'resume' | 'job_post';
+  
+  // Original document info
+  originalName?: string | undefined;
+  originalMimeType?: string | undefined;
+  originalSize?: number | undefined;
+  
+  // Processed text (from current DocumentService)
+  text: string;
+  wordCount: number;
+  
+  // Processing metadata
+  conversionMethod: 'cloudflare-ai' | 'text-input' | 'fallback' | 'javascript-fallback';
+  processedAt: string;
+  
+  // Future: structured data extraction (Iteration 3)
+  structuredData?: ResumeStructuredData | JobPostStructuredData;
+}
+
+/**
+ * Future: Structured resume data (Iteration 3)
+ * Will be extracted from resume text for advanced features
+ */
+export interface ResumeStructuredData {
+  personalInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+  };
+  
+  experience?: JobExperience[];
+  education?: EducationRecord[];
+  skills?: string[];
+  
+  // For "beautiful PDF generation" feature
+  lastJob?: JobExperience;
+  previousJob?: JobExperience;
+  earlierExperiences?: JobExperience[];
+}
+
+/**
+ * Future: Structured job posting data (Iteration 3)
+ */
+export interface JobPostStructuredData {
+  jobTitle?: string;
+  company?: string;
+  location?: string;
+  salaryRange?: string;
+  
+  requirements?: {
+    required: string[];
+    preferred: string[];
+  };
+  
+  responsibilities?: string[];
+  benefits?: string[];
+}
+
+/**
+ * Job experience record for structured data
+ */
+export interface JobExperience {
+  company: string;
+  position: string;
+  startDate: string;
+  endDate?: string; // undefined for current job
+  duration?: string; // "2 years 3 months"
+  
+  responsibilities: string[];
+  achievements: string[];
+  
+  // For matching analysis
+  technologies?: string[];
+  industryType?: string;
+}
+
+/**
+ * Education record for structured data
+ */
+export interface EducationRecord {
+  institution: string;
+  degree: string;
+  field: string;
+  startDate: string;
+  endDate?: string;
+  
+  gpa?: string;
+  honors?: string[];
+  relevantCourses?: string[];
 }

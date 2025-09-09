@@ -13,25 +13,11 @@ import { DocumentService } from '../services/document';
 import { AIService } from '../services/ai';
 import { EnhancedAIService } from '../services/enhanced-ai';
 import { AdminAuthService } from '../services/admin-auth';
+import { DocumentProcessingPipeline } from '../services/document-pipeline';
+import { CloudflareRequestStorage } from '../services/request-storage';
+import { UserRequestManager } from '../services/request-manager';
 import { ConversationHandler } from '../handlers/conversation';
 import { WebhookHandler } from '../handlers/webhook';
-import { Env } from '../index';
-
-// Type for service instances (broad type to accommodate various services)
-type ServiceInstance = object;
-
-// Interface for services that can be health-checked
-interface HealthCheckable {
-  healthCheck?(): Promise<ServiceHealth>;
-}
-
-// Interface for services that can be shut down
-interface Shutdownable {
-  shutdown?(): Promise<void>;
-}
-
-// Combined interface for service lifecycle
-type ManagedService = ServiceInstance & HealthCheckable & Shutdownable;
 
 export interface ServiceFactory<T> {
   create(container: ServiceContainer): Promise<T>;
@@ -42,7 +28,7 @@ export interface ServiceHealth {
   name: string;
   status: 'healthy' | 'unhealthy' | 'unknown';
   message: string;
-  details?: Record<string, unknown>;
+  details?: any;
 }
 
 export interface ServiceInfo {
@@ -56,8 +42,8 @@ export interface ServiceInfo {
  * Main dependency injection container
  */
 export class ServiceContainer {
-  private services: Map<string, ManagedService> = new Map();
-  private factories: Map<string, ServiceFactory<unknown>> = new Map();
+  private services: Map<string, any> = new Map();
+  private factories: Map<string, ServiceFactory<any>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
 
@@ -71,7 +57,7 @@ export class ServiceContainer {
       throw new Error(`Service ${name} is already registered`);
     }
 
-    this.factories.set(name, factory as ServiceFactory<unknown>);
+    this.factories.set(name, factory);
   }
 
   /**
@@ -107,7 +93,7 @@ export class ServiceContainer {
       const service = await factory.create(this);
 
       // Cache and mark as initialized
-      this.services.set(name, service as ManagedService);
+      this.services.set(name, service);
       this.initialized.add(name);
 
       console.log(`✅ Service initialized: ${name}`);
@@ -250,7 +236,7 @@ export class ServiceContainer {
  * Create a configured service container
  */
 export async function createServiceContainer(
-  env: Env
+  env: any
 ): Promise<ServiceContainer> {
   const container = new ServiceContainer();
 
@@ -344,6 +330,40 @@ export async function createServiceContainer(
     },
   });
 
+  // Register request storage service
+  container.register('requestStorage', {
+    dependencies: [],
+    async create() {
+      return new CloudflareRequestStorage(
+        env.SESSIONS, // Reuse existing KV for requests
+        env.CACHE,    // Use cache KV for documents
+        env.SESSIONS  // Use sessions KV for user request index
+      );
+    },
+  });
+
+  // Register document processing pipeline
+  container.register('documentPipeline', {
+    dependencies: ['requestStorage'],
+    async create(container) {
+      const storage = await container.get<CloudflareRequestStorage>('requestStorage');
+      return new DocumentProcessingPipeline(env.AI, storage);
+    },
+  });
+
+  // Register user request manager
+  container.register('requestManager', {
+    dependencies: ['documentPipeline', 'requestStorage', 'enhancedAI', 'logging'],
+    async create(container) {
+      const pipeline = await container.get<DocumentProcessingPipeline>('documentPipeline');
+      const storage = await container.get<CloudflareRequestStorage>('requestStorage');
+      const enhancedAI = await container.get<EnhancedAIService>('enhancedAI');
+      const logging = await container.get<LoggingService>('logging');
+      
+      return new UserRequestManager(pipeline, storage, enhancedAI, logging);
+    },
+  });
+
   // Register admin auth service
   container.register('adminAuth', {
     dependencies: ['config'],
@@ -373,6 +393,7 @@ export async function createServiceContainer(
       'ai',
       'enhancedAI',
       'logging',
+      'requestManager',
       'config',
     ],
     async create(container) {
@@ -383,6 +404,7 @@ export async function createServiceContainer(
       const enhancedAIService =
         await container.get<EnhancedAIService>('enhancedAI');
       const loggingService = await container.get<LoggingService>('logging');
+      const requestManager = await container.get<UserRequestManager>('requestManager');
       const config =
         await container.get<EnvironmentConfigurationService>('config');
 
@@ -395,6 +417,7 @@ export async function createServiceContainer(
         aiService,
         enhancedAIService,
         loggingService,
+        requestManager,
         envConfig.environment,
         envConfig.security.adminPassword
       );
@@ -429,18 +452,7 @@ export async function createServiceContainer(
 /**
  * Load application configuration (environment-specific)
  */
-async function loadAppConfig(environment: string): Promise<{
-  admin: Record<
-    string,
-    {
-      authRequired: boolean;
-      openAccess: boolean;
-      sessionTimeoutHours: number;
-      maxLoginAttempts: number;
-      loginCooldownMinutes: number;
-    }
-  >;
-}> {
+async function loadAppConfig(environment: string): Promise<any> {
   // Environment-specific configuration
   const configs = {
     development: {

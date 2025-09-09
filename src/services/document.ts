@@ -4,18 +4,13 @@
 
 import { ProcessedDocument } from '../types/session';
 
-// Cloudflare Workers AI interface for document processing
-interface WorkersAI {
-  toMarkdown(
-    documents: Array<{ name: string; blob: Blob }>
-  ): Promise<Array<{ markdown: string }>>;
-}
+// Note: PDF parsing fallback will be implemented when a Cloudflare Workers-compatible library is available
 
 export class DocumentService {
   private maxFileSizeMB: number;
-  private ai: WorkersAI | undefined;
+  private ai: any;
 
-  constructor(maxFileSizeMB: number = 10, ai?: WorkersAI) {
+  constructor(maxFileSizeMB: number = 10, ai?: any) {
     this.maxFileSizeMB = maxFileSizeMB;
     this.ai = ai;
   }
@@ -91,63 +86,100 @@ export class DocumentService {
   }
 
   /**
-   * Extract text from PDF using Cloudflare Workers AI
+   * Extract text from PDF using Cloudflare Workers AI with JavaScript fallback
    */
   private async extractTextFromPDF(content: ArrayBuffer): Promise<string> {
-    if (!this.ai) {
-      throw new Error('AI сервис недоступен для обработки PDF');
-    }
+    // Try Cloudflare Workers AI first
+    if (this.ai) {
+      try {
+        // Check if toMarkdown method exists
+        if (typeof this.ai.toMarkdown === 'function') {
+          const blob = new Blob([content], { type: 'application/pdf' });
+          
+          const results = await this.ai.toMarkdown([{
+            name: 'document.pdf',
+            blob
+          }]);
 
-    try {
-      const blob = new Blob([content], { type: 'application/pdf' });
-
-      const results = await this.ai.toMarkdown([
-        {
-          name: 'document.pdf',
-          blob,
-        },
-      ]);
-
-      if (results && results[0] && results[0].markdown) {
-        return this.markdownToText(results[0].markdown);
-      } else {
-        throw new Error('Не удалось извлечь текст из PDF');
+          if (results && results[0] && results[0].markdown) {
+            console.log('✅ PDF processed with Cloudflare Workers AI');
+            return this.markdownToText(results[0].markdown);
+          }
+        } else {
+          console.warn('⚠️ AI.toMarkdown method not available, trying fallback');
+        }
+      } catch (error) {
+        console.error('⚠️ Cloudflare Workers AI failed, trying fallback:', error);
       }
-    } catch (error) {
-      console.error('Error processing PDF:', error);
-      throw new Error('Ошибка при обработке PDF файла');
+    } else {
+      console.warn('⚠️ AI service not available, trying JavaScript fallback');
     }
+
+    // Note: JavaScript PDF parsing libraries don't work in Cloudflare Workers
+    // This fallback is for future compatibility if we switch to a Workers-compatible library
+    console.warn('⚠️ JavaScript PDF fallback not available in Cloudflare Workers');
+
+    // If all methods fail, provide helpful guidance
+    const errorMessage = [
+      'Не удалось обработать PDF файл.',
+      '',
+      '🔧 Возможные решения:',
+      '1. Включите Workers AI в панели Cloudflare (dash.cloudflare.com)',
+      '2. Убедитесь, что у вас есть платный план Cloudflare',
+      '3. Скопируйте и вставьте текст вручную',
+      '',
+      '💡 Workers AI требует платный аккаунт для обработки документов'
+    ].join('\n');
+    
+    throw new Error(errorMessage);
   }
 
   /**
    * Extract text from DOCX using Cloudflare Workers AI
    */
   private async extractTextFromDOCX(content: ArrayBuffer): Promise<string> {
-    if (!this.ai) {
-      throw new Error('AI сервис недоступен для обработки DOCX');
-    }
+    // Try Cloudflare Workers AI first
+    if (this.ai) {
+      try {
+        // Check if toMarkdown method exists
+        if (typeof this.ai.toMarkdown === 'function') {
+          const blob = new Blob([content], { 
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          });
+          
+          const results = await this.ai.toMarkdown([{
+            name: 'document.docx',
+            blob
+          }]);
 
-    try {
-      const blob = new Blob([content], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      });
-
-      const results = await this.ai.toMarkdown([
-        {
-          name: 'document.docx',
-          blob,
-        },
-      ]);
-
-      if (results && results[0] && results[0].markdown) {
-        return this.markdownToText(results[0].markdown);
-      } else {
-        throw new Error('Не удалось извлечь текст из DOCX');
+          if (results && results[0] && results[0].markdown) {
+            console.log('✅ DOCX processed with Cloudflare Workers AI');
+            return this.markdownToText(results[0].markdown);
+          }
+        } else {
+          console.warn('⚠️ AI.toMarkdown method not available for DOCX');
+        }
+      } catch (error) {
+        console.error('⚠️ Cloudflare Workers AI failed for DOCX:', error);
       }
-    } catch (error) {
-      console.error('Error processing DOCX:', error);
-      throw new Error('Ошибка при обработке DOCX файла');
+    } else {
+      console.warn('⚠️ AI service not available for DOCX processing');
     }
+
+    // For now, DOCX fallback is not implemented
+    const errorMessage = [
+      'Не удалось обработать DOCX файл.',
+      '',
+      '🔧 Возможные решения:',
+      '1. Включите Workers AI в панели Cloudflare (dash.cloudflare.com)',
+      '2. Убедитесь, что у вас есть платный план Cloudflare',
+      '3. Конвертируйте DOCX в PDF и попробуйте снова',
+      '4. Скопируйте и вставьте текст вручную',
+      '',
+      '💡 Workers AI требует платный аккаунт для обработки документов'
+    ].join('\n');
+    
+    throw new Error(errorMessage);
   }
 
   /**
