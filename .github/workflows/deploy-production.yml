@@ -1,8 +1,8 @@
-name: Deploy to Production (v2)
+name: Deploy to Production
 
 # Advanced production deployment with comprehensive safeguards
 on:
-  # Manual deployment only for production
+  # Manual deployment for production (safer approach)
   workflow_dispatch:
     inputs:
       staging_commit:
