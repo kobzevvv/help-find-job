@@ -24,6 +24,9 @@ export interface Env {
   // Environment Configuration
   ENVIRONMENT?: string;
   WEBHOOK_SECRET?: string;
+
+  // Admin Configuration
+  ADMIN_PASSWORD?: string;
 }
 
 /**
