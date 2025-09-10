@@ -3,10 +3,10 @@
  * Supports only two commands: /send_resume and /send_job_ad
  */
 
-import { TelegramMessage } from '../types/telegram';
+import { LoggingService } from '../services/logging';
 import { SessionService } from '../services/session';
 import { TelegramService } from '../services/telegram';
-import { LoggingService } from '../services/logging';
+import { TelegramMessage } from '../types/telegram';
 
 export class ConversationHandler {
   private sessionService: SessionService;
@@ -134,6 +134,10 @@ export class ConversationHandler {
         await this.startJobAdCollection(chatId, userId);
         break;
 
+      case '/get_logs':
+        await this.sendLogs(chatId);
+        break;
+
       default:
         await this.sendHelpMessage(chatId);
     }
@@ -250,12 +254,36 @@ export class ConversationHandler {
   }
 
   /**
+   * Send logs to admin
+   */
+  private async sendLogs(chatId: number): Promise<void> {
+    try {
+      // Get environment from process or default
+      const environment = process.env.ENVIRONMENT || 'development';
+
+      // Get formatted logs (limit to 20 for readability)
+      const logsMessage = await this.loggingService.getFormattedRecentLogs(20, environment);
+
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: logsMessage,
+      });
+    } catch (error) {
+      console.error('Error sending logs:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Не удалось получить логи. Попробуйте позже.',
+      });
+    }
+  }
+
+  /**
    * Send welcome message
    */
   private async sendWelcomeMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - помощь',
+      text: '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n/help - помощь',
     });
   }
 
@@ -407,7 +435,7 @@ export class ConversationHandler {
   private async sendHelpMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
     });
   }
 }

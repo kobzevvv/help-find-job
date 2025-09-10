@@ -153,4 +153,29 @@ export class TelegramService {
       return false;
     }
   }
+
+  /**
+   * Set bot commands
+   */
+  async setMyCommands(commands: Array<{command: string, description: string}>): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/setMyCommands`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ commands }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to set commands:', await response.text());
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error setting commands:', error);
+      return false;
+    }
+  }
 }
