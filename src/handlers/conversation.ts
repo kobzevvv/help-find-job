@@ -160,11 +160,12 @@ export class ConversationHandler {
         // Temporary fix: redirect to admin commands with help message
         await this.telegramService.sendMessage({
           chat_id: chatId,
-          text: '🔧 **Admin команды:**\n\n' +
-                '• `/get_last_10_messages [password]` - последние 10 сообщений\n' +
-                '• `/get_last_100_messages [password]` - последние 100 сообщений\n' +
-                '• `/log_summary [password]` - сводка логов\n\n' +
-                '💡 **Пример:** `/get_last_10_messages YOUR_PASSWORD`'
+          text:
+            '🔧 **Admin команды:**\n\n' +
+            '• `/get_last_10_messages [password]` - последние 10 сообщений\n' +
+            '• `/get_last_100_messages [password]` - последние 100 сообщений\n' +
+            '• `/log_summary [password]` - сводка логов\n\n' +
+            '💡 **Пример:** `/get_last_10_messages YOUR_PASSWORD`',
         });
         break;
 
@@ -360,10 +361,22 @@ export class ConversationHandler {
   ): Promise<void> {
     try {
       // Simple authorization check with debugging
-      console.log('DEBUG handleAdminLogSummaryCommand: Environment:', this.environment);
-      console.log('DEBUG handleAdminLogSummaryCommand: Provided password:', providedPassword);
-      console.log('DEBUG handleAdminLogSummaryCommand: Admin password:', this.adminPassword);
-      console.log('DEBUG handleAdminLogSummaryCommand: Passwords match:', providedPassword === this.adminPassword);
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Environment:',
+        this.environment
+      );
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Provided password:',
+        providedPassword
+      );
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Admin password:',
+        this.adminPassword
+      );
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Passwords match:',
+        providedPassword === this.adminPassword
+      );
 
       const isAuthorized =
         this.environment === 'staging' ||
@@ -419,16 +432,16 @@ export class ConversationHandler {
     }
   }
 
-
-
   /**
    * Send welcome message
    */
   private async sendWelcomeMessage(chatId: number): Promise<void> {
-    const baseMessage = '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - помощь';
+    const baseMessage =
+      '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - помощь';
 
     // Add admin commands for staging/development
-    const adminCommands = '\n\n🔧 **Admin команды:**\n/get_last_10_messages - последние 10 сообщений\n/get_last_100_messages - последние 100 сообщений\n/log_summary - сводка логов';
+    const adminCommands =
+      '\n\n🔧 **Admin команды:**\n/get_last_10_messages - последние 10 сообщений\n/get_last_100_messages - последние 100 сообщений\n/log_summary - сводка логов';
 
     const fullMessage = baseMessage + adminCommands;
 
@@ -584,10 +597,12 @@ export class ConversationHandler {
    * Send help message
    */
   private async sendHelpMessage(chatId: number): Promise<void> {
-    const baseMessage = '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - эта справка\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.';
+    const baseMessage =
+      '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - эта справка\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.';
 
     // Add admin commands for staging/development
-    const adminCommands = '\n\n🔧 **Admin команды:**\n/get_last_10_messages - последние 10 сообщений\n/get_last_100_messages - последние 100 сообщений\n/log_summary - сводка логов';
+    const adminCommands =
+      '\n\n🔧 **Admin команды:**\n/get_last_10_messages - последние 10 сообщений\n/get_last_100_messages - последние 100 сообщений\n/log_summary - сводка логов';
 
     const fullMessage = baseMessage + adminCommands;
 
