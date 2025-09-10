@@ -1,12 +1,8 @@
 /**
- * User session management service
+ * Simplified user session management service
  */
 
-import {
-  UserSession,
-  ConversationState,
-  ProcessedDocument,
-} from '../types/session';
+import { UserSession, ConversationState } from '../types/session';
 
 export class SessionService {
   private kv: KVNamespace;
@@ -55,11 +51,7 @@ export class SessionService {
   /**
    * Create new session
    */
-  createSession(
-    userId: number,
-    chatId: number,
-    language?: string
-  ): UserSession {
+  createSession(userId: number, chatId: number): UserSession {
     const now = new Date().toISOString();
 
     return {
@@ -68,17 +60,13 @@ export class SessionService {
       state: 'idle',
       createdAt: now,
       lastActivity: now,
-      language: language || 'ru',
     };
   }
 
   /**
    * Update session state
    */
-  async updateState(
-    userId: number,
-    state: ConversationState
-  ): Promise<boolean> {
+  async updateState(userId: number, state: ConversationState): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
@@ -89,53 +77,59 @@ export class SessionService {
   }
 
   /**
-   * Add resume to session
+   * Append text to resume
    */
-  async addResume(
-    userId: number,
-    document: ProcessedDocument
-  ): Promise<boolean> {
+  async appendResumeText(userId: number, text: string): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
     }
 
-    session.resume = document;
-    // Stay in waiting_resume until user confirms with 'done'
+    session.resumeText = (session.resumeText || '') + text + '\n';
     return await this.saveSession(session);
   }
 
   /**
-   * Add job post to session
+   * Append text to job ad
    */
-  async addJobPost(
-    userId: number,
-    document: ProcessedDocument
-  ): Promise<boolean> {
+  async appendJobAdText(userId: number, text: string): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
     }
 
-    session.jobPost = document;
-    session.state = 'processing';
+    session.jobAdText = (session.jobAdText || '') + text + '\n';
     return await this.saveSession(session);
   }
 
   /**
-   * Complete session (reset to idle)
+   * Get resume text for user
    */
-  async completeSession(userId: number): Promise<boolean> {
+  async getResumeText(userId: number): Promise<string | null> {
+    const session = await this.getSession(userId);
+    return session?.resumeText || null;
+  }
+
+  /**
+   * Get job ad text for user
+   */
+  async getJobAdText(userId: number): Promise<string | null> {
+    const session = await this.getSession(userId);
+    return session?.jobAdText || null;
+  }
+
+  /**
+   * Clear user data
+   */
+  async clearUserData(userId: number): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;
     }
 
-    // Keep session but reset state and documents
+    delete session.resumeText;
+    delete session.jobAdText;
     session.state = 'idle';
-    session.resume = undefined;
-    session.jobPost = undefined;
-
     return await this.saveSession(session);
   }
 
@@ -150,13 +144,5 @@ export class SessionService {
       console.error('Error deleting session:', error);
       return false;
     }
-  }
-
-  /**
-   * Check if user has active session
-   */
-  async hasActiveSession(userId: number): Promise<boolean> {
-    const session = await this.getSession(userId);
-    return session !== null && session.state !== 'idle';
   }
 }
