@@ -40,6 +40,12 @@
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:delete": "node scripts/delete-webhook.js",
     "webhook:info": "node scripts/webhook-info.js",
+    "commands:set": "node scripts/set-bot-commands.js",
+    "commands:set:staging": "node scripts/set-bot-commands.js staging",
+    "commands:set:prod": "node scripts/set-bot-commands.js production",
+    "commands:test": "node scripts/test-bot-commands.js",
+    "telegram-bot-commands": "node scripts/set-bot-commands.js",
+    "telegram-bot-commands:post-deploy": "node scripts/set-commands-after-deploy.js",
     "validate:migration": "node scripts/validate-migration.js",
     "validate:container": "node scripts/validate-container.js",
     "validate:staging": "npm run validate:migration && npm run validate:container",
@@ -90,6 +96,7 @@
     "npm": ">=8.0.0"
   },
   "dependencies": {
+    "dotenv": "^17.2.2",
     "openai": "^4.20.0"
   },
   "devDependencies": {

@@ -70,6 +70,14 @@ if [ "$ENVIRONMENT" = "staging" ] || [ "$ENVIRONMENT" = "production" ]; then
         echo "🔍 Running comprehensive validation..."
         npm run validate:migration
         echo "✅ Staging validation completed"
+
+        echo "🤖 Setting bot commands for staging..."
+        if npm run telegram-bot-commands staging; then
+            echo "✅ Bot commands set for staging"
+        else
+            echo "⚠️  Bot commands not set for staging (tokens may not be configured)"
+            echo "    You can set them later with: npm run telegram-bot-commands staging"
+        fi
     else
         echo "🔍 Running production health check..."
         # For production, we'll just do a basic health check
@@ -77,6 +85,14 @@ if [ "$ENVIRONMENT" = "staging" ] || [ "$ENVIRONMENT" = "production" ]; then
         PROD_URL="https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev"
         curl -f "$PROD_URL/health" > /dev/null
         echo "✅ Production health check passed"
+
+        echo "🤖 Setting bot commands for production..."
+        if npm run telegram-bot-commands production; then
+            echo "✅ Bot commands set for production"
+        else
+            echo "⚠️  Bot commands not set for production (tokens may not be configured)"
+            echo "    You can set them later with: npm run telegram-bot-commands production"
+        fi
     fi
     
     echo ""

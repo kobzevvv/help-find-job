@@ -1,269 +1,70 @@
 name: Deploy to Staging
 
-# Advanced staging deployment with artifact inheritance
 on:
   push:
-    branches: [main]
+    branches: [ main, develop ]
   workflow_dispatch:
-    inputs:
-      force_rebuild:
-        description: 'Force rebuild instead of using cached artifacts'
-        required: false
-        default: false
-        type: boolean
-      reason:
-        description: 'Reason for manual deployment'
-        required: false
-        default: 'Manual staging deployment'
-
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
-  checks: write         # Required by quality-gates workflow
 
 jobs:
-  # Run quality gates first or inherit from previous run
-  quality-gates:
-    uses: ./.github/workflows/quality-gates.yml
-    secrets: inherit
-
   deploy-staging:
-    name: Deploy to Staging Environment
     runs-on: ubuntu-latest
-    needs: quality-gates
-    if: needs.quality-gates.outputs.build-success == 'true'
-    
+
     environment:
       name: staging
       url: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Restore build artifacts
-        uses: actions/cache@v4
-        id: restore-build
-        with:
-          path: |
-            dist/
-            coverage/
-          key: ${{ needs.quality-gates.outputs.build-cache-key }}
-          restore-keys: |
-            build-${{ runner.os }}-
-      
-      - name: Rebuild if cache miss or forced
-        if: steps.restore-build.outputs.cache-hit != 'true' || github.event.inputs.force_rebuild == 'true'
-        run: |
-          echo "🔄 Building application (cache miss or forced rebuild)"
-          npm run build:ci
-      
-      - name: Validate build artifacts
-        run: |
-          if [ ! -f "dist/index.js" ]; then
-            echo "❌ dist/index.js not found - build failed"
-            exit 1
-          fi
-          echo "✅ Build artifacts validated"
-      
-      - name: Pre-deployment environment check
-        run: |
-          echo "🔍 Checking staging deployment prerequisites..."
-          
-          # Check required secrets
-          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-            echo "❌ CLOUDFLARE_API_TOKEN secret is not set"
-            exit 1
-          fi
-          
-          if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
-            echo "❌ CLOUDFLARE_ACCOUNT_ID secret is not set"
-            exit 1
-          fi
-          
-          # Optional checks
-          if [ -z "${{ secrets.OPENAI_API_KEY_STAGING }}" ]; then
-            echo "⚠️ OPENAI_API_KEY_STAGING not set - AI features disabled"
-          else
-            echo "✅ OPENAI_API_KEY_STAGING configured"
-          fi
-          
-          echo "✅ Staging prerequisites validated"
-      
-      - name: Deploy to Cloudflare Workers (Staging)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env staging
-        env:
-          # Environment-specific variables
-          TELEGRAM_BOT_TOKEN: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING }}
-          WEBHOOK_SECRET: "3c8a4efeb4b36eed52758eb194300a89d3074567299b3a826ea0922100a16752"
-          ADMIN_PASSWORD_STAGING: "12354678"
-          
-          # New environment-specific configuration
-          BOT_TOKEN_STAGING: "8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
-          BOT_USERNAME_STAGING: "job_search_help_staging_bot"
-          WORKER_NAME_STAGING: "help-with-job-search-telegram-bot-staging"
-          WORKER_URL_STAGING: "https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
-          DEBUG_LOGGING_STAGING: "true"
-      
-      - name: Configure staging webhook
-        if: success()
-        run: |
-          echo "🔗 Configuring staging webhook..."
-          
-          WEBHOOK_URL="https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/webhook"
-          BOT_TOKEN="8358869176:AAGo9WKrpUnbLBD-Zq40DIPpfdoBZroPVfI"
-          WEBHOOK_SECRET="3c8a4efeb4b36eed52758eb194300a89d3074567299b3a826ea0922100a16752"
-          
-          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
-            -H "Content-Type: application/json" \
-            -d "{\"url\": \"${WEBHOOK_URL}\", \"secret_token\": \"${WEBHOOK_SECRET}\"}")
-          
-          echo "📞 Webhook response: $RESPONSE"
-          
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
-            echo "✅ Staging webhook configured successfully"
-          else
-            echo "❌ Failed to configure staging webhook"
-            echo "🔍 Response: $RESPONSE"
-            exit 1
-          fi
-      
-      - name: Post-deployment health check
-        if: success()
-        run: |
-          echo "🏥 Running staging health checks..."
-          
-          STAGING_URL="https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
-          
-          # Wait for deployment to stabilize
-          echo "⏳ Waiting 15 seconds for deployment stabilization..."
-          sleep 15
-          
-          # Health check
-          echo "🔍 Checking: ${STAGING_URL}/health"
-          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${STAGING_URL}/health" || echo "000")
-          
-          if [ "$HEALTH_STATUS" = "200" ]; then
-            echo "✅ Staging health check passed (HTTP $HEALTH_STATUS)"
-          else
-            echo "⚠️ Health check returned HTTP $HEALTH_STATUS"
-            echo "🔍 Attempting basic connectivity test..."
-            
-            BASIC_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL" || echo "000")
-            if [ "$BASIC_STATUS" = "200" ] || [ "$BASIC_STATUS" = "404" ]; then
-              echo "✅ Basic connectivity OK (HTTP $BASIC_STATUS)"
-            else
-              echo "❌ Staging deployment may have failed"
-              exit 1
-            fi
-          fi
-      
-      - name: Run staging smoke tests
-        if: success()
-        run: |
-          echo "🧪 Running staging smoke tests..."
-          
-          # Test basic Telegram webhook endpoint
-          STAGING_URL="https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/webhook"
-          
-          # Test with invalid request (should return 4xx, not 5xx)
-          WEBHOOK_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$STAGING_URL" \
-            -H "Content-Type: application/json" \
-            -d '{"test": "smoke"}' || echo "000")
-          
-          if [[ "$WEBHOOK_STATUS" =~ ^[2-4][0-9][0-9]$ ]]; then
-            echo "✅ Webhook endpoint responsive (HTTP $WEBHOOK_STATUS)"
-          else
-            echo "⚠️ Webhook endpoint returned HTTP $WEBHOOK_STATUS"
-          fi
-          
-          echo "✅ Staging smoke tests completed"
 
-  post-deployment:
-    name: Post-Deployment Activities
-    runs-on: ubuntu-latest
-    needs: [quality-gates, deploy-staging]
-    if: success()
-    
     steps:
-      - name: Create deployment tracking issue
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const deploymentTime = new Date().toISOString();
-            const commitSha = context.sha.substring(0, 8);
-            const deploymentReason = context.eventName === 'workflow_dispatch' 
-              ? `Manual deployment: ${{ github.event.inputs.reason }}`
-              : 'Automatic staging deployment from main branch';
-            
-            const issueBody = `## 🔄 Staging Deployment Completed
-            
-            **📅 Deployment Time**: ${deploymentTime}
-            **🔢 Commit**: ${commitSha}
-            **🌿 Branch**: ${{ github.ref_name }}
-            **📝 Reason**: ${deploymentReason}
-            **🏗️ Workflow**: Advanced CI/CD v2
-            
-            ### 🧪 Quality Gates Results
-            - [x] Code quality checks passed
-            - [x] Type checking passed
-            - [x] All tests passed (Unit, Integration, E2E)
-            - [x] Build artifacts cached and validated
-            
-            ### 🚀 Staging Environment
-            - **Bot**: @job_search_help_staging_bot
-            - **URL**: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev
-            - **Health Check**: ✅ Passed
-            - **Smoke Tests**: ✅ Passed
-            
-            ### 📋 Ready for Production
-            This staging deployment is ready for promotion to production when approved.
-            
-            ### 🤖 Test the Staging Bot
-            1. Start a conversation with @job_search_help_staging_bot
-            2. Test resume analysis features
-            3. Verify all functionality works as expected
-            
-            ---
-            **🤖 Automated deployment tracking**
-            Deployment ID: ${context.runId}`;
-            
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🔄 Staging Deployment - ${commitSha} - ${deploymentTime}`,
-              body: issueBody,
-              labels: ['deployment', 'staging', 'ready-for-production']
-            });
-      
-      - name: Deployment summary
-        run: |
-          echo "📊 Advanced Staging Deployment Summary"
-          echo "======================================="
-          echo "📦 Repository: ${{ github.repository }}"
-          echo "🌿 Branch: ${{ github.ref_name }}"
-          echo "🔢 Commit: ${{ github.sha }}"
-          echo "🕐 Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "🏗️ Architecture: Advanced CI/CD v2"
-          echo "📋 Build Cache: ${{ needs.quality-gates.outputs.build-cache-key }}"
-          echo ""
-          echo "✅ Staging deployment completed successfully!"
-          echo "🤖 Staging bot: @job_search_help_staging_bot"
-          echo "🌐 Staging URL: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
-          echo "🔄 Ready for production promotion"
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting and type checking
+      run: npm run quality
+
+    - name: Run tests
+      run: npm test
+
+    - name: Build project
+      run: npm run build
+
+    - name: Deploy to Cloudflare Workers (Staging)
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: deploy --env staging
+
+    - name: Wait for deployment stabilization
+      run: sleep 10
+
+    - name: Verify deployment health
+      run: |
+        curl -f https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/health
+
+    - name: Set Telegram bot commands
+      env:
+        TELEGRAM_BOT_TOKEN_STAGING: ${{ secrets.TELEGRAM_BOT_TOKEN_STAGING }}
+      run: |
+        echo "TELEGRAM_BOT_TOKEN_STAGING=$TELEGRAM_BOT_TOKEN_STAGING" > .env.staging.local
+        npm run telegram-bot-commands staging
+
+    - name: Post-deployment notification
+      if: success()
+      run: |
+        echo "✅ Staging deployment successful!"
+        echo "🤖 Bot: @job_search_help_staging_bot"
+        echo "🌐 URL: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
+
+    - name: Post-deployment notification (failure)
+      if: failure()
+      run: |
+        echo "❌ Staging deployment failed!"
+        echo "Check the logs above for details."

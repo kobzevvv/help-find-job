@@ -39,8 +39,21 @@ git clone https://github.com/kobzevvv/help-find-job.git
 cd help-find-job
 npm install
 
-# Deploy to staging
+# Deploy to staging (includes automatic bot command setup)
 npm run deploy:staging
+
+# Or deploy safely with full validation
+npm run deploy:safe:staging
+```
+
+#### Bot Command Management
+```bash
+# Set commands for all environments
+npm run telegram-bot-commands
+
+# Set commands for specific environment
+npm run telegram-bot-commands staging
+npm run telegram-bot-commands production
 ```
 
 ## 🤖 Test the Bot
@@ -59,6 +72,27 @@ npm run deploy:staging
      -H "Content-Type: application/json" \
      -d '{"url": "https://your-worker.workers.dev/webhook"}'
    ```
+
+## 🤖 Bot Commands
+
+The bot supports the following commands (available in Russian for user interface):
+
+| Command | Description | Russian Description |
+|---------|-------------|-------------------|
+| `/start` | Start the bot | Запустить бота |
+| `/help` | Show help | Показать справку |
+| `/send_resume` | Send resume | Отправить резюме |
+| `/send_job_ad` | Send job ad | Отправить вакансию |
+| `/get_logs` | Get logs (admin) | Получить логи |
+
+### **📝 Command Declaration**
+
+Bot commands are centrally declared in [`scripts/set-bot-commands.js`](scripts/set-bot-commands.js) for easy maintenance and consistency across environments.
+
+**For Developers:**
+- Commands are automatically set during deployment via `npm run telegram-bot-commands`
+- Environment-specific commands are configured for staging and production
+- Use `npm run telegram-bot-commands [staging|production]` to update commands manually
 
 ## 📱 Usage Examples
 
@@ -106,9 +140,17 @@ help-find-job/
 │   ├── services/          # Core business logic
 │   └── types/             # TypeScript definitions
 ├── docs/                 # Documentation
-├── scripts/              # Deployment scripts
+├── scripts/
+│   ├── set-bot-commands.js  # 🤖 Bot command management
+│   └── deploy-safely.sh     # 🚀 Safe deployment script
 └── wrangler.toml         # Cloudflare configuration
 ```
+
+### **🤖 Command Management**
+- **File**: [`scripts/set-bot-commands.js`](scripts/set-bot-commands.js)
+- **Purpose**: Central command definition and deployment
+- **Commands**: `npm run telegram-bot-commands [environment]`
+- **Integration**: Automatically runs during deployment
 
 ## 🔒 Privacy & Security
 
