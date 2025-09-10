@@ -48,7 +48,13 @@
     "clean:deps": "rm -rf node_modules package-lock.json",
     "clean:all": "npm run clean",
     "precommit": "npm run type-check && npm run lint && npm run test",
-    "postinstall": "npm run type-check"
+    "postinstall": "npm run type-check",
+    "prepare": "husky",
+    "dev:debug": "wrangler dev --inspect",
+    "quality": "npm run type-check && npm run lint && npm run format:check",
+    "quality:fix": "npm run lint:fix && npm run format",
+    "fix:linting": "node scripts/fix-linting-issues.js",
+    "setup:dev": "npm install && npm run prepare && npm run quality:fix"
   },
   "keywords": [
     "telegram",
@@ -96,6 +102,7 @@
     "eslint": "^8.50.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "jest-environment-miniflare": "^2.14.0",
     "prettier": "^3.0.0",

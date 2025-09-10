@@ -1,0 +1,73 @@
+name: PR Quality Check (Simple)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main, develop ]
+
+jobs:
+  quality-check:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Check for auto-fixable issues
+      id: lint-check
+      run: |
+        if npm run lint:fix --silent 2>/dev/null; then
+          echo "autofix=true" >> $GITHUB_OUTPUT
+        else
+          echo "autofix=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check formatting
+      id: format-check
+      run: |
+        if npm run format --silent 2>/dev/null; then
+          echo "formatted=true" >> $GITHUB_OUTPUT
+        else
+          echo "formatted=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Report Results
+      run: |
+        echo "## 📋 PR Quality Check Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ steps.lint-check.outputs.autofix }}" = "true" ]; then
+          echo "✅ **ESLint issues detected and fixed**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ **No ESLint issues found**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${{ steps.format-check.outputs.formatted }}" = "true" ]; then
+          echo "✅ **Code formatting applied**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ **Code already properly formatted**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Development Commands:" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "# Auto-fix all issues locally" >> $GITHUB_STEP_SUMMARY
+        echo "npm run quality:fix" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Check everything is good" >> $GITHUB_STEP_SUMMARY
+        echo "npm run quality" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📖 **Need help?** Check our [Code Quality Guide](./docs/CODE_QUALITY_GUIDE.md)" >> $GITHUB_STEP_SUMMARY

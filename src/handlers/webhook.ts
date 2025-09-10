@@ -151,22 +151,30 @@ export class WebhookHandler {
 
           if (!chatId || !userId) return;
 
+          // Handle done buttons
           if (data === 'resume_done') {
             await this.conversationHandler['sessionService'].updateState(
               userId,
-              'waiting_job_post'
+              'idle'
             );
             await this.conversationHandler['telegramService'].sendMessage({
               chat_id: chatId,
-              text: '✅ Спасибо! Я получил ваше резюме. Теперь пришлите текст вакансии (можно в одном или нескольких сообщениях).',
+              text: '✅ Резюме получено! Используйте /send_job_ad для отправки вакансии.',
             });
-          } else if (data === 'cancel') {
-            await this.conversationHandler['sessionService'].completeSession(
-              userId
+          } else if (data === 'job_done') {
+            await this.conversationHandler['sessionService'].updateState(
+              userId,
+              'idle'
             );
             await this.conversationHandler['telegramService'].sendMessage({
               chat_id: chatId,
-              text: '✅ Процесс отменён. Вы можете начать заново командой /resume_and_job_post_match',
+              text: '✅ Вакансия получена! Теперь вы можете начать новую сессию.',
+            });
+          } else {
+            // Unknown callback - just acknowledge
+            await this.conversationHandler['telegramService'].sendMessage({
+              chat_id: chatId,
+              text: '✅ Получено',
             });
           }
         } catch (e) {
