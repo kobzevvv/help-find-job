@@ -1,9 +1,18 @@
-name: PR Quality Assistant
+# This workflow is disabled by default due to permission issues with forked PRs
+# Use pr-quality-simple.yml instead for better compatibility
+name: PR Quality Assistant (Advanced)
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [ main, develop ]
+  # Disabled by default due to permission issues with forks
+  # Uncomment the lines below if you have proper permissions set up
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  #   branches: [ main, develop ]
+  workflow_dispatch: # Manual trigger only
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   quality-assistant:
@@ -47,39 +56,47 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
-          const { autofix, formatted } = ${{ steps.lint-check.outputs.autofix == 'true' || steps.format-check.outputs.formatted == 'true' }};
+          try {
+            const autofix = '${{ steps.lint-check.outputs.autofix }}' === 'true';
+            const formatted = '${{ steps.format-check.outputs.formatted }}' === 'true';
 
-          let message = '## 🤖 Code Quality Assistant\n\n';
-          message += 'I\'ve detected some code quality issues that can be automatically fixed:\n\n';
+            let message = '## 🤖 Code Quality Assistant\n\n';
+            message += 'I\'ve detected some code quality issues that can be automatically fixed:\n\n';
 
-          if ('${{ steps.lint-check.outputs.autofix }}' === 'true') {
-            message += '✅ **ESLint issues fixed** - Auto-fixed linting problems\n';
+            if (autofix) {
+              message += '✅ **ESLint issues fixed** - Auto-fixed linting problems\n';
+            }
+
+            if (formatted) {
+              message += '✅ **Code formatted** - Applied Prettier formatting\n';
+            }
+
+            message += '\n### Next Steps:\n';
+            message += '1. **Pull the latest changes** from this branch\n';
+            message += '2. **Review the auto-fixes** in your IDE\n';
+            message += '3. **Commit and push** the fixes\n';
+            message += '\n### Local Development:\n';
+            message += '```bash\n';
+            message += '# Auto-fix all issues\n';
+            message += 'npm run quality:fix\n';
+            message += '\n';
+            message += '# Check everything is good\n';
+            message += 'npm run quality\n';
+            message += '```\n\n';
+            message += '📖 **Need help?** Check our [Code Quality Guide](./docs/CODE_QUALITY_GUIDE.md)';
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+
+            console.log('✅ Successfully posted PR comment');
+          } catch (error) {
+            console.log('⚠️  Could not post PR comment (likely due to permissions):', error.message);
+            console.log('This is normal for PRs from forks. The fixes were still applied.');
           }
-
-          if ('${{ steps.format-check.outputs.formatted }}' === 'true') {
-            message += '✅ **Code formatted** - Applied Prettier formatting\n';
-          }
-
-          message += '\n### Next Steps:\n';
-          message += '1. **Pull the latest changes** from this branch\n';
-          message += '2. **Review the auto-fixes** in your IDE\n';
-          message += '3. **Commit and push** the fixes\n';
-          message += '\n### Local Development:\n';
-          message += '```bash\n';
-          message += '# Auto-fix all issues\n';
-          message += 'npm run quality:fix\n';
-          message += '\n';
-          message += '# Check everything is good\n';
-          message += 'npm run quality\n';
-          message += '```\n\n';
-          message += '📖 **Need help?** Check our [Code Quality Guide](./docs/CODE_QUALITY_GUIDE.md)';
-
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: message
-          });
 
   suggest-improvements:
     name: Suggest Improvements
@@ -127,31 +144,38 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
-          const qualityScore = ${{ steps.quality-analysis.outputs.quality_score }};
-          const tsFiles = ${{ steps.quality-analysis.outputs.ts_files }};
-          const anyCount = ${{ steps.quality-analysis.outputs.any_count }};
+          try {
+            const qualityScore = ${{ steps.quality-analysis.outputs.quality_score }};
+            const tsFiles = ${{ steps.quality-analysis.outputs.ts_files }};
+            const anyCount = ${{ steps.quality-analysis.outputs.any_count }};
 
-          let message = '## 📊 Code Quality Insights\n\n';
-          message += `**Quality Score:** ${qualityScore}/100\n\n`;
+            let message = '## 📊 Code Quality Insights\n\n';
+            message += `**Quality Score:** ${qualityScore}/100\n\n`;
 
-          if (anyCount > 0) {
-            message += `⚠️ **${anyCount} 'any' types found** - Consider using specific types\n\n`;
+            if (anyCount > 0) {
+              message += `⚠️ **${anyCount} 'any' types found** - Consider using specific types\n\n`;
+            }
+
+            message += `📁 **${tsFiles} TypeScript files** analyzed\n\n`;
+
+            if (qualityScore < 80) {
+              message += '### Suggestions:\n';
+              message += '- Replace `any` types with specific interfaces\n';
+              message += '- Use union types instead of `any` where appropriate\n';
+              message += '- Consider using `unknown` for truly dynamic data\n';
+            }
+
+            message += '\n📖 Learn more in our [Code Quality Guide](./docs/CODE_QUALITY_GUIDE.md)';
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+
+            console.log('✅ Successfully posted quality insights');
+          } catch (error) {
+            console.log('⚠️  Could not post quality insights (likely due to permissions):', error.message);
+            console.log('This is normal for PRs from forks.');
           }
-
-          message += `📁 **${tsFiles} TypeScript files** analyzed\n\n`;
-
-          if (qualityScore < 80) {
-            message += '### Suggestions:\n';
-            message += '- Replace `any` types with specific interfaces\n';
-            message += '- Use union types instead of `any` where appropriate\n';
-            message += '- Consider using `unknown` for truly dynamic data\n';
-          }
-
-          message += '\n📖 Learn more in our [Code Quality Guide](./docs/CODE_QUALITY_GUIDE.md)';
-
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: message
-          });

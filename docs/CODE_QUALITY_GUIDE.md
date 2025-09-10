@@ -248,19 +248,35 @@ node_modules/
 
 ## 🔄 CI/CD Integration
 
-### GitHub Actions Workflow
-The project includes automated checks:
+### GitHub Actions Workflows
 
-```yaml
-- name: Lint Code
-  run: npm run lint
+The project includes multiple automated quality checks:
 
-- name: Check Formatting
-  run: npm run format:check
+#### Main CI Pipeline (`ci.yml`)
+- **Lint Code** - ESLint checks
+- **Format Check** - Prettier validation
+- **Type Check** - TypeScript compilation
+- **Unit Tests** - Test execution
 
-- name: Type Check
-  run: npm run type-check
-```
+#### PR Quality Assistant (`pr-quality.yml`)
+- **Auto-fixes** - Automatically fixes formatting and linting issues
+- **Quality Insights** - Provides feedback on code quality metrics
+- **PR Comments** - Posts helpful comments on pull requests
+
+#### Simple Quality Check (`pr-quality-simple.yml`)
+- **Lightweight alternative** - No PR comments, just job summaries
+- **Fork-friendly** - Works with forked repositories
+- **Fast execution** - Minimal permissions required
+
+### Handling Permission Issues
+
+If you see "Resource not accessible by integration" errors:
+
+1. **For forked PRs**: Use the simple workflow (`pr-quality-simple.yml`)
+2. **For main repo PRs**: The full workflow should work with proper permissions
+3. **Local development**: Always run `npm run quality:fix` before pushing
+
+The workflows are designed to fail gracefully - even if commenting fails, the actual fixes are still applied to your code.
 
 ### Pre-commit Hooks
 Using husky for git hooks:
