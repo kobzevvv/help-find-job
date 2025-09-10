@@ -17,7 +17,6 @@ export interface ServiceFactory<T> {
   dependencies: string[];
 }
 
-
 export interface ServiceInfo {
   name: string;
   initialized: boolean;
@@ -152,8 +151,6 @@ export class ServiceContainer {
       `✅ All ${serviceNames.length} services initialized successfully`
     );
   }
-
-
 }
 
 /**

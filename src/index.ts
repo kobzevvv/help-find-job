@@ -36,7 +36,8 @@ async function initializeServices(env: Env) {
   const sessionService = await container.get<SessionService>('session');
   const telegramService = await container.get<TelegramService>('telegram');
   const loggingService = await container.get<LoggingService>('logging');
-  const conversationHandler = await container.get<ConversationHandler>('conversation');
+  const conversationHandler =
+    await container.get<ConversationHandler>('conversation');
   const webhookHandler = await container.get<WebhookHandler>('webhook');
 
   console.log('✅ All services initialized');
@@ -110,5 +111,4 @@ export default {
       );
     }
   },
-
 };

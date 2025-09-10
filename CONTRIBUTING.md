@@ -96,9 +96,9 @@ git checkout -b feature/your-feature-name
 - Write code following our [coding standards](#coding-standards)
 - Add tests for new functionality
 - Update documentation as needed
-- Run tests locally: `npm test`
-- Check types: `npm run type-check`
-- Lint code: `npm run lint`
+- **Auto-quality checks**: Pre-commit hooks run automatically
+- **Quick fixes**: Use `npm run quality:fix` to auto-fix issues
+- **Manual checks**: `npm run quality` to verify everything passes
 
 ### 3. Testing Your Changes
 ```bash
@@ -133,11 +133,13 @@ npm run deploy:dev
 
 ### Code Style
 - Use Prettier for formatting (configured in `package.json`)
-- Follow ESLint rules (configured in `package.json`)
+- Follow ESLint rules (configured in `.eslintrc.js`)
 - Maximum line length: 80 characters
-- Use semicolons
-- Use single quotes for strings
+- Use semicolons and single quotes
 - 2 spaces for indentation
+- **Auto-formatting**: Code is automatically formatted on save (VS Code) and commit (pre-commit hooks)
+
+📖 **Detailed guidelines**: See our [Code Quality Guide](./docs/CODE_QUALITY_GUIDE.md)
 
 ### Naming Conventions
 - **Files**: kebab-case (`telegram-handler.ts`)
@@ -366,14 +368,21 @@ npm run dev              # Local development
 npm run deploy:dev      # Deploy to dev environment
 npm run logs:dev        # View dev logs
 
-# Testing  
+# Testing
 npm test               # Run all tests
 npm run test:watch     # Watch mode
 npm run test:coverage  # Coverage report
 
-# Code Quality
+# Code Quality (Recommended)
+npm run quality        # Check all quality gates
+npm run quality:fix    # Auto-fix all issues
+npm run setup:dev      # Full development setup
+
+# Individual checks
 npm run lint           # Lint code
+npm run lint:fix       # Fix linting issues
 npm run format         # Format code
+npm run format:check   # Check formatting
 npm run type-check     # Type checking
 ```
 

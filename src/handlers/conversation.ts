@@ -40,9 +40,14 @@ export class ConversationHandler {
 
     try {
       // Log the message
-      await this.loggingService.logUserMessage(userId, chatId, message.text || 'document', {
-      messageId: message.message_id,
-      });
+      await this.loggingService.logUserMessage(
+        userId,
+        chatId,
+        message.text || 'document',
+        {
+          messageId: message.message_id,
+        }
+      );
 
       // Handle commands
       if (message.text?.startsWith('/')) {
@@ -86,7 +91,7 @@ export class ConversationHandler {
 
     switch (state) {
       case 'collecting_resume':
-          await this.handleResumeText(text, chatId, userId);
+        await this.handleResumeText(text, chatId, userId);
         break;
 
       case 'collecting_job_ad':
@@ -94,10 +99,10 @@ export class ConversationHandler {
         break;
 
       default:
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
           text: 'Используйте команды /send_resume или /send_job_ad для начала.',
-      });
+        });
     }
   }
 
@@ -137,7 +142,10 @@ export class ConversationHandler {
   /**
    * Start resume collection
    */
-  private async startResumeCollection(chatId: number, userId: number): Promise<void> {
+  private async startResumeCollection(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     // Create or get session
     let session = await this.sessionService.getSession(userId);
     if (!session) {
@@ -148,8 +156,8 @@ export class ConversationHandler {
     // Set state to collecting resume
     await this.sessionService.updateState(userId, 'collecting_resume');
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '📄 Отправьте ваше резюме. Можно отправить текст в нескольких сообщениях или прикрепить PDF файл.\n\nКогда закончите, скажите "готово".',
     });
   }
@@ -157,7 +165,10 @@ export class ConversationHandler {
   /**
    * Start job ad collection
    */
-  private async startJobAdCollection(chatId: number, userId: number): Promise<void> {
+  private async startJobAdCollection(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     // Create or get session
     let session = await this.sessionService.getSession(userId);
     if (!session) {
@@ -168,8 +179,8 @@ export class ConversationHandler {
     // Set state to collecting job ad
     await this.sessionService.updateState(userId, 'collecting_job_ad');
 
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '💼 Отправьте текст вакансии. Можно отправить в нескольких сообщениях или прикрепить PDF файл.\n\nКогда закончите, скажите "готово".',
     });
   }
@@ -177,60 +188,64 @@ export class ConversationHandler {
   /**
    * Handle resume text input
    */
-  private async handleResumeText(text: string, chatId: number, userId: number): Promise<void> {
+  private async handleResumeText(
+    text: string,
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     // Check if this is a "done" command
     if (['готово', 'done', 'готов', 'ok'].includes(text.trim().toLowerCase())) {
       await this.sessionService.updateState(userId, 'idle');
-          await this.telegramService.sendMessage({
-            chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '✅ Резюме получено! Используйте /send_job_ad для отправки вакансии.',
-        });
-        return;
-      }
+      });
+      return;
+    }
 
     // Append text to resume
     await this.sessionService.appendResumeText(userId, text);
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
-        text: '✅ Добавлено к резюме. Продолжайте или нажмите кнопку:',
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ Готово с резюме', callback_data: 'resume_done' }
-            ]
-          ]
-        }
-      });
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: '✅ Добавлено к резюме. Продолжайте или нажмите кнопку:',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ Готово с резюме', callback_data: 'resume_done' }],
+        ],
+      },
+    });
   }
 
   /**
    * Handle job ad text input
    */
-  private async handleJobAdText(text: string, chatId: number, userId: number): Promise<void> {
+  private async handleJobAdText(
+    text: string,
+    chatId: number,
+    userId: number
+  ): Promise<void> {
     // Check if this is a "done" command
     if (['готово', 'done', 'готов', 'ok'].includes(text.trim().toLowerCase())) {
       await this.sessionService.updateState(userId, 'idle');
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '✅ Вакансия получена! Теперь вы можете начать новую сессию.',
-        });
-        return;
-      }
+      });
+      return;
+    }
 
     // Append text to job ad
     await this.sessionService.appendJobAdText(userId, text);
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '✅ Добавлено к вакансии. Продолжайте или нажмите кнопку:',
       reply_markup: {
         inline_keyboard: [
-          [
-            { text: '✅ Готово с вакансией', callback_data: 'job_done' }
-          ]
-        ]
-      }
+          [{ text: '✅ Готово с вакансией', callback_data: 'job_done' }],
+        ],
+      },
     });
   }
 
@@ -258,8 +273,8 @@ export class ConversationHandler {
 
     // Check file size (limit to 10MB)
     if (fileSize > 10 * 1024 * 1024) {
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '❌ Файл слишком большой. Максимальный размер: 10MB.',
       });
       return;
@@ -267,8 +282,8 @@ export class ConversationHandler {
 
     // Check file type (only PDF for now)
     if (!document.mime_type?.includes('pdf')) {
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '❌ Поддерживаются только PDF файлы.',
       });
       return;
@@ -280,8 +295,8 @@ export class ConversationHandler {
       const state = session?.state || 'idle';
 
       if (state !== 'collecting_resume' && state !== 'collecting_job_ad') {
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
           text: '❌ Сначала используйте команду /send_resume или /send_job_ad',
         });
         return;
@@ -299,7 +314,9 @@ export class ConversationHandler {
         throw new Error('Не удалось получить информацию о файле');
       }
 
-      const fileContent = await this.telegramService.downloadFile(fileInfo.file_path);
+      const fileContent = await this.telegramService.downloadFile(
+        fileInfo.file_path
+      );
       if (!fileContent) {
         throw new Error('Не удалось скачать файл');
       }
@@ -315,15 +332,13 @@ export class ConversationHandler {
       if (state === 'collecting_resume') {
         await this.sessionService.appendResumeText(userId, extractedText);
         await this.telegramService.sendMessage({
-      chat_id: chatId,
+          chat_id: chatId,
           text: `✅ PDF "${fileName}" обработан (${extractedText.length} символов).\nПродолжайте или нажмите кнопку:`,
           reply_markup: {
             inline_keyboard: [
-              [
-                { text: '✅ Готово с резюме', callback_data: 'resume_done' }
-              ]
-            ]
-          }
+              [{ text: '✅ Готово с резюме', callback_data: 'resume_done' }],
+            ],
+          },
         });
       } else if (state === 'collecting_job_ad') {
         await this.sessionService.appendJobAdText(userId, extractedText);
@@ -332,14 +347,11 @@ export class ConversationHandler {
           text: `✅ PDF "${fileName}" обработан (${extractedText.length} символов).\nПродолжайте или нажмите кнопку:`,
           reply_markup: {
             inline_keyboard: [
-              [
-                { text: '✅ Готово с вакансией', callback_data: 'job_done' }
-              ]
-            ]
-          }
+              [{ text: '✅ Готово с вакансией', callback_data: 'job_done' }],
+            ],
+          },
         });
       }
-
     } catch (error) {
       console.error('Error processing document:', error);
       await this.telegramService.sendMessage({
@@ -352,7 +364,10 @@ export class ConversationHandler {
   /**
    * Process PDF file using Cloudflare AI
    */
-  private async processPDFFile(fileContent: ArrayBuffer, fileName: string): Promise<string> {
+  private async processPDFFile(
+    fileContent: ArrayBuffer,
+    fileName: string
+  ): Promise<string> {
     try {
       if (!this.ai) {
         // Fallback if AI is not available
@@ -360,13 +375,16 @@ export class ConversationHandler {
         return `PDF файл "${fileName}" принят. Размер: ${Math.round(fileContent.byteLength / 1024)} KB. Для извлечения текста требуется настройка ИИ.`;
       }
 
-      console.log(`Processing PDF: ${fileName}, size: ${fileContent.byteLength} bytes`);
+      console.log(
+        `Processing PDF: ${fileName}, size: ${fileContent.byteLength} bytes`
+      );
 
       // Use Cloudflare AI for PDF text extraction
       // Using @cf/unum/uform-gen2-qwen-500m for document understanding
       const response = await this.ai.run('@cf/unum/uform-gen2-qwen-500m', {
         image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
-        prompt: 'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.'
+        prompt:
+          'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
       });
 
       if (response && response.description) {
@@ -375,7 +393,6 @@ export class ConversationHandler {
 
       // If AI response doesn't have expected format, return a basic message
       return `PDF файл "${fileName}" обработан. Извлечено ${Math.round(fileContent.byteLength / 1024)} KB данных.`;
-
     } catch (error) {
       console.error('Error processing PDF:', error);
 
@@ -388,8 +405,8 @@ export class ConversationHandler {
    * Send help message
    */
   private async sendHelpMessage(chatId: number): Promise<void> {
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
     });
   }

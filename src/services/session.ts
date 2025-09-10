@@ -66,7 +66,10 @@ export class SessionService {
   /**
    * Update session state
    */
-  async updateState(userId: number, state: ConversationState): Promise<boolean> {
+  async updateState(
+    userId: number,
+    state: ConversationState
+  ): Promise<boolean> {
     const session = await this.getSession(userId);
     if (!session) {
       return false;

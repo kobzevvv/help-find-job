@@ -16,4 +16,3 @@ export interface UserSession {
   createdAt: string;
   lastActivity: string;
 }
-
