@@ -262,7 +262,10 @@ export class ConversationHandler {
       const environment = process.env.ENVIRONMENT || 'development';
 
       // Get formatted logs (limit to 20 for readability)
-      const logsMessage = await this.loggingService.getFormattedRecentLogs(20, environment);
+      const logsMessage = await this.loggingService.getFormattedRecentLogs(
+        20,
+        environment
+      );
 
       await this.telegramService.sendMessage({
         chat_id: chatId,

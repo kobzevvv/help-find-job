@@ -115,8 +115,9 @@ export default {
           },
           security: {
             authRequired: true,
-            debugLogging: environment === 'staging' || environment === 'development',
-          }
+            debugLogging:
+              environment === 'staging' || environment === 'development',
+          },
         };
 
         return new Response(
@@ -140,9 +141,15 @@ export default {
         let telegramConnectivity = { status: 'unknown', message: 'Not tested' };
         try {
           if (env.TELEGRAM_BOT_TOKEN) {
-            telegramConnectivity = { status: 'success', message: 'Token present' };
+            telegramConnectivity = {
+              status: 'success',
+              message: 'Token present',
+            };
           } else {
-            telegramConnectivity = { status: 'warning', message: 'No token configured' };
+            telegramConnectivity = {
+              status: 'warning',
+              message: 'No token configured',
+            };
           }
         } catch (error) {
           telegramConnectivity = { status: 'error', message: String(error) };
@@ -152,13 +159,19 @@ export default {
         let openaiConnectivity = { status: 'unknown', message: 'Not tested' };
         try {
           // We don't have direct access to OpenAI token in this simplified version
-          openaiConnectivity = { status: 'info', message: 'OpenAI not configured in this version' };
+          openaiConnectivity = {
+            status: 'info',
+            message: 'OpenAI not configured in this version',
+          };
         } catch (error) {
           openaiConnectivity = { status: 'error', message: String(error) };
         }
 
         // Test webhook accessibility
-        let webhookAccessibility = { status: 'success', message: 'Endpoint accessible' };
+        let webhookAccessibility = {
+          status: 'success',
+          message: 'Endpoint accessible',
+        };
 
         const validation = {
           overallStatus: 'success',
@@ -167,21 +180,20 @@ export default {
             openaiConnectivity,
             webhookAccessibility,
           },
-          recommendations: [] as string[]
+          recommendations: [] as string[],
         };
 
         // Add recommendations based on environment
         if (environment === 'staging') {
           validation.recommendations.push('Test bot commands after deployment');
-          validation.recommendations.push('Verify webhook is properly configured');
+          validation.recommendations.push(
+            'Verify webhook is properly configured'
+          );
         }
 
-        return new Response(
-          JSON.stringify(validation),
-          {
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
+        return new Response(JSON.stringify(validation), {
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
 
       // Telegram webhook endpoint

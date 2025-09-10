@@ -157,7 +157,9 @@ export class TelegramService {
   /**
    * Set bot commands
    */
-  async setMyCommands(commands: Array<{command: string, description: string}>): Promise<boolean> {
+  async setMyCommands(
+    commands: Array<{ command: string; description: string }>
+  ): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}/setMyCommands`, {
         method: 'POST',
