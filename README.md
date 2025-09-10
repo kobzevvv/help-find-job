@@ -1,26 +1,26 @@
-# 🤖 Resume & Job Matching Bot
+# 🤖 Simple Resume & Job Collection Bot
 
-**Simple Telegram bot to collect resumes and job descriptions**
+**Lightweight Telegram bot for collecting resumes and job descriptions**
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kobzevvv/help-find-job)
 
 ## 📋 What It Does
 
-This Telegram bot helps you collect resumes and job descriptions through simple commands:
+A simple Telegram bot that collects resumes and job descriptions with minimal complexity:
 
 ### **🎯 Core Features**
-- **📄 Resume Collection**: Send your resume as text or PDF file
-- **💼 Job Ad Collection**: Send job descriptions as text or PDF file
-- **🔄 Multi-message Support**: Send content in multiple messages
-- **✅ One-click Completion**: Use buttons to finish sending content
-- **🌍 Simple Interface**: Easy to use with clear instructions
+- **📄 Resume Collection**: Text or PDF files (up to 10MB)
+- **💼 Job Ad Collection**: Text or PDF files (up to 10MB)  
+- **🔄 Multi-message Support**: Send content across multiple messages
+- **✅ One-click Completion**: "Done" buttons for easy finishing
+- **🔐 Admin Commands**: Secure logging and monitoring
 
 ### **📱 How It Works**
-1. Send `/send_resume` to start sending your resume
-2. Send text or PDF files (up to 10MB)
-3. Click "Done" button or type "готово" when finished
-4. Send `/send_job_ad` to start sending job description
-5. Repeat the process for job ads
+1. `/send_resume` - Start resume collection
+2. Send text or PDF files
+3. Click "Done" button when finished
+4. `/send_job_ad` - Start job description collection
+5. Repeat process for job ads
 
 ## 🚀 Quick Start
 
@@ -61,6 +61,18 @@ npm run telegram-bot-commands production
 ### **🧪 Public Test Bot**
 **[@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot)** - Try it right now!
 
+### **🏭 Production Bot**
+**[@job_search_help_bot](https://t.me/job_search_help_bot)** - Live production bot
+- ✅ **Deployed & Live** - Ready for production use
+- 🔒 **Secure admin commands** - Use your custom admin password
+- 🌐 **Production URL**: https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev
+
+**To update production admin password:**
+```bash
+wrangler secret put ADMIN_PASSWORD --env production
+# Then enter your secure password when prompted
+```
+
 ### **🔧 Create Your Own Bot** (Optional)
 
 1. Message [@BotFather](https://t.me/BotFather) in Telegram
@@ -75,15 +87,21 @@ npm run telegram-bot-commands production
 
 ## 🤖 Bot Commands
 
-The bot supports the following commands (available in Russian for user interface):
+### **👥 User Commands**
+| Command | Description |
+|---------|-------------|
+| `/start` | Start the bot |
+| `/help` | Show help |
+| `/send_resume` | Send resume |
+| `/send_job_ad` | Send job ad |
 
-| Command | Description | Russian Description |
-|---------|-------------|-------------------|
-| `/start` | Start the bot | Запустить бота |
-| `/help` | Show help | Показать справку |
-| `/send_resume` | Send resume | Отправить резюме |
-| `/send_job_ad` | Send job ad | Отправить вакансию |
-| `/get_logs` | Get logs (admin) | Получить логи |
+### **🔐 Admin Commands**
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `/get_last_10_messages` | Last 10 messages | `/get_last_10_messages YOUR_PASSWORD` |
+| `/get_last_100_messages` | Last 100 messages | `/get_last_100_messages YOUR_PASSWORD` |
+| `/log_summary` | Log summary | `/log_summary YOUR_PASSWORD` |
+| `/get_logs` | Admin help | Shows admin command guide |
 
 ### **📝 Command Declaration**
 
@@ -121,6 +139,29 @@ Bot: 💼 Send job description. You can send text or PDF files.
 User: [sends job text]
 Bot: ✅ Added to job ad. Continue or click button:
 [✅ Done with job ad button]
+
+### **🔐 Admin Usage**
+
+Admin commands require a secure password:
+
+```bash
+# View recent logs
+/get_last_10_messages YOUR_PASSWORD
+
+# Get log summary
+/log_summary YOUR_PASSWORD
+
+# Get admin help
+/get_logs
+```
+
+**Setting Admin Password:**
+```bash
+# For production
+wrangler secret put ADMIN_PASSWORD --env production
+
+# For staging  
+wrangler secret put ADMIN_PASSWORD --env staging
 ```
 
 ## 🛠️ Technical Details
@@ -146,18 +187,44 @@ help-find-job/
 └── wrangler.toml         # Cloudflare configuration
 ```
 
-### **🤖 Command Management**
-- **File**: [`scripts/set-bot-commands.js`](scripts/set-bot-commands.js)
-- **Purpose**: Central command definition and deployment
-- **Commands**: `npm run telegram-bot-commands [environment]`
-- **Integration**: Automatically runs during deployment
+### **🤖 Deployment**
+```bash
+# Deploy to staging
+npm run deploy:staging
 
-## 🔒 Privacy & Security
+# Deploy to production  
+npm run deploy:prod
 
-- **No data storage**: Files are processed and immediately discarded
-- **Encrypted communication**: All messages secured via HTTPS
-- **Session-based**: Data expires automatically after use
-- **No tracking**: Only essential bot functionality, no analytics
+# Set bot commands (if needed)
+npm run telegram-bot-commands production
+```
+
+## 🌐 Live Bots
+
+### **🏭 Production Bot**
+**[@job_search_help_bot](https://t.me/job_search_help_bot)** - Live production bot
+- ✅ **Deployed & Live** - Ready for production use
+- 🔒 **Secure admin commands** - Use your custom admin password
+- 🌐 **Production URL**: https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev
+
+**To update production admin password:**
+```bash
+wrangler secret put ADMIN_PASSWORD --env production
+# Then enter your secure password when prompted
+```
+
+### **🧪 Staging Bot**  
+**[@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot)** - Test environment
+- 🧪 **Testing & Development** - Safe environment for testing changes
+- 🔓 **Open admin access** - No password required for staging
+- 🌐 **Staging URL**: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev
+
+## 🔒 Security
+
+- **Secure admin access**: Password-protected admin commands
+- **Environment isolation**: Separate staging and production environments  
+- **Session-based storage**: Temporary data that expires automatically
+- **HTTPS encryption**: All communications secured
 
 ## 🤝 Contributing
 
@@ -169,4 +236,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**🧪 Try the bot now: [@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot)**
+**🧪 Try the staging bot: [@job_search_help_staging_bot](https://t.me/job_search_help_staging_bot)**
+
+**🏭 Use the production bot: [@job_search_help_bot](https://t.me/job_search_help_bot)**

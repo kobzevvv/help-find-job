@@ -13,17 +13,23 @@ export class ConversationHandler {
   private telegramService: TelegramService;
   private loggingService: LoggingService;
   private ai: any; // Cloudflare AI binding
+  private adminPassword: string;
+  private environment: string;
 
   constructor(
     sessionService: SessionService,
     telegramService: TelegramService,
     loggingService: LoggingService,
-    ai?: any
+    ai?: any,
+    adminPassword: string = '12354678',
+    environment: string = 'development'
   ) {
     this.sessionService = sessionService;
     this.telegramService = telegramService;
     this.loggingService = loggingService;
     this.ai = ai;
+    this.adminPassword = adminPassword;
+    this.environment = environment;
   }
 
   /**
@@ -134,8 +140,33 @@ export class ConversationHandler {
         await this.startJobAdCollection(chatId, userId);
         break;
 
+      case '/get_last_10_messages':
+        await this.handleAdminLogCommand(chatId, userId, 10, parts[1]);
+        break;
+
+      case '/get_last_100_messages':
+        await this.handleAdminLogCommand(chatId, userId, 100, parts[1]);
+        break;
+
+      case '/get_last_300_messages':
+        await this.handleAdminLogCommand(chatId, userId, 300, parts[1]);
+        break;
+
+      case '/log_summary':
+        await this.handleAdminLogSummaryCommand(chatId, userId, parts[1]);
+        break;
+
       case '/get_logs':
-        await this.sendLogs(chatId);
+        // Temporary fix: redirect to admin commands with help message
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text:
+            '🔧 **Admin команды:**\n\n' +
+            '• `/get_last_10_messages [password]` - последние 10 сообщений\n' +
+            '• `/get_last_100_messages [password]` - последние 100 сообщений\n' +
+            '• `/log_summary [password]` - сводка логов\n\n' +
+            '💡 **Пример:** `/get_last_10_messages YOUR_PASSWORD`',
+        });
         break;
 
       default:
@@ -254,29 +285,150 @@ export class ConversationHandler {
   }
 
   /**
-   * Send logs to admin
+   * Handle admin log command with password authentication
    */
-  private async sendLogs(chatId: number): Promise<void> {
+  private async handleAdminLogCommand(
+    chatId: number,
+    userId: number,
+    limit: number,
+    providedPassword?: string
+  ): Promise<void> {
     try {
-      // Get environment from process or default
-      const environment = process.env.ENVIRONMENT || 'development';
+      // Parse command to extract password
+      // For now, we'll use a simple approach - in a real implementation
+      // you'd want to parse the command properly
 
-      // Get formatted logs (limit to 20 for readability)
+      // Simple authorization check
+      const isAuthorized =
+        this.environment === 'staging' ||
+        providedPassword === this.adminPassword;
+
+      if (!isAuthorized) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: this.getInvalidPasswordMessage(),
+        });
+        await this.loggingService.log(
+          'WARN',
+          'ADMIN_ACCESS_DENIED',
+          `Unauthorized access attempt to logs (limit: ${limit})`,
+          { userId, limit }
+        );
+        return;
+      }
+
+      // Send "loading" message
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `📊 Fetching last ${limit} log messages...`,
+      });
+
+      // Get formatted logs
       const logsMessage = await this.loggingService.getFormattedRecentLogs(
-        20,
-        environment
+        limit,
+        this.environment
       );
 
+      // Send logs
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: logsMessage,
       });
+
+      // Log successful access
+      await this.loggingService.log(
+        'INFO',
+        'ADMIN_LOGS_ACCESSED',
+        `Admin accessed last ${limit} messages`,
+        { userId, limit }
+      );
     } catch (error) {
-      console.error('Error sending logs:', error);
+      console.error('Error in admin log command:', error);
       await this.telegramService.sendMessage({
         chat_id: chatId,
-        text: '❌ Не удалось получить логи. Попробуйте позже.',
+        text: '❌ Error retrieving logs. Please try again.',
       });
+    }
+  }
+
+  /**
+   * Handle admin log summary command
+   */
+  private async handleAdminLogSummaryCommand(
+    chatId: number,
+    userId: number,
+    providedPassword?: string
+  ): Promise<void> {
+    try {
+      // Simple authorization check with debugging
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Environment:',
+        this.environment
+      );
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Provided password:',
+        providedPassword
+      );
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Admin password:',
+        this.adminPassword
+      );
+      console.log(
+        'DEBUG handleAdminLogSummaryCommand: Passwords match:',
+        providedPassword === this.adminPassword
+      );
+
+      const isAuthorized =
+        this.environment === 'staging' ||
+        providedPassword === this.adminPassword;
+
+      if (!isAuthorized) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: this.getInvalidPasswordMessage(),
+        });
+        return;
+      }
+
+      // Send "loading" message
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '📊 Generating log summary...',
+      });
+
+      // Get log summary (24 hours)
+      const summary = await this.loggingService.getAdminLogSummary(24);
+
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: summary,
+      });
+
+      await this.loggingService.log(
+        'INFO',
+        'ADMIN_LOG_SUMMARY_ACCESSED',
+        'Admin accessed log summary',
+        { userId }
+      );
+    } catch (error) {
+      console.error('Error in admin log summary command:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Error generating log summary. Please try again.',
+      });
+    }
+  }
+
+  /**
+   * Get invalid password message
+   */
+  private getInvalidPasswordMessage(): string {
+    if (this.environment === 'staging') {
+      return `❌ Invalid password for staging environment.\n\n🔑 **Staging Password**: \`${this.adminPassword}\`\n\n💡 **Example:** \`/get_last_10_messages ${this.adminPassword}\``;
+    } else if (this.environment === 'production') {
+      return `❌ Invalid password for production environment.\n\n🔒 **Contact maintainer for the secure password.**\n\n💡 **Format:** \`/get_last_10_messages AdminPass2024_Secure_9X7mK2pL8qR3nF6j\``;
+    } else {
+      return `❌ Invalid password for ${this.environment} environment.\n\n🛠️ **Password**: \`${this.adminPassword}\`\n\n💡 **Format:** \`/command password\``;
     }
   }
 
@@ -284,9 +436,18 @@ export class ConversationHandler {
    * Send welcome message
    */
   private async sendWelcomeMessage(chatId: number): Promise<void> {
+    const baseMessage =
+      '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - помощь';
+
+    // Add admin commands for staging/development
+    const adminCommands =
+      '\n\n🔧 **Admin команды:**\n/get_last_10_messages - последние 10 сообщений\n/get_last_100_messages - последние 100 сообщений\n/log_summary - сводка логов';
+
+    const fullMessage = baseMessage + adminCommands;
+
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n/help - помощь',
+      text: fullMessage,
     });
   }
 
@@ -436,9 +597,18 @@ export class ConversationHandler {
    * Send help message
    */
   private async sendHelpMessage(chatId: number): Promise<void> {
+    const baseMessage =
+      '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/help - эта справка\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.';
+
+    // Add admin commands for staging/development
+    const adminCommands =
+      '\n\n🔧 **Admin команды:**\n/get_last_10_messages - последние 10 сообщений\n/get_last_100_messages - последние 100 сообщений\n/log_summary - сводка логов';
+
+    const fullMessage = baseMessage + adminCommands;
+
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+      text: fullMessage,
     });
   }
 }

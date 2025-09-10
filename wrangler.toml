@@ -98,6 +98,7 @@ BOT_USERNAME_PRODUCTION = "job_search_help_bot"
 WORKER_NAME_PRODUCTION = "help-with-job-search-telegram-bot"
 WORKER_URL_PRODUCTION = "https://help-with-job-search-telegram-bot.vova-likes-smoothy.workers.dev"
 
+
 # =============================================================================
 # Local Development Configuration
 # =============================================================================
