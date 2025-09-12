@@ -25,40 +25,40 @@ if (targetEnvironment === 'staging') {
 const BOT_COMMANDS = [
   {
     command: 'start',
-    description: 'Запустить бота'
+    description: 'Запустить бота',
   },
   {
     command: 'help',
-    description: 'Показать справку'
+    description: 'Показать справку',
   },
   {
     command: 'send_resume',
-    description: 'Отправить резюме'
+    description: 'Отправить резюме',
   },
   {
     command: 'send_job_ad',
-    description: 'Отправить вакансию'
+    description: 'Отправить вакансию',
   },
   {
     command: 'get_logs',
-    description: 'Получить логи'
-  }
+    description: 'Получить логи',
+  },
 ];
 
 // Environment configuration
 const ENVIRONMENTS = {
   staging: {
     name: 'staging',
-    botTokenEnv: 'TELEGRAM_BOT_TOKEN_STAGING',
+    botTokenEnv: 'TELEGRAM_BOT_STAGING_TOKEN',
     botUsername: 'job_search_help_staging_bot',
-    description: 'Staging bot'
+    description: 'Staging bot',
   },
   production: {
     name: 'production',
-    botTokenEnv: 'TELEGRAM_BOT_TOKEN_PRODUCTION',
+    botTokenEnv: 'TELEGRAM_BOT_PRODUCTION_TOKEN',
     botUsername: 'job_search_help_bot',
-    description: 'Production bot'
-  }
+    description: 'Production bot',
+  },
 };
 
 /**
@@ -72,8 +72,8 @@ function makeTelegramRequest(url, data) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
+        'Content-Length': Buffer.byteLength(postData),
+      },
     };
 
     const req = https.request(url, options, (res) => {
@@ -116,17 +116,22 @@ async function setBotCommands(botToken, environment) {
 
   try {
     const response = await makeTelegramRequest(url, {
-      commands: BOT_COMMANDS
+      commands: BOT_COMMANDS,
     });
 
     console.log(`✅ Commands set successfully for ${environment.description}`);
     console.log(`🤖 Bot: @${environment.botUsername}`);
-    console.log(`📋 Commands: ${BOT_COMMANDS.map(cmd => `/${cmd.command}`).join(', ')}`);
+    console.log(
+      `📋 Commands: ${BOT_COMMANDS.map((cmd) => `/${cmd.command}`).join(', ')}`
+    );
     console.log('');
 
     return true;
   } catch (error) {
-    console.error(`❌ Failed to set commands for ${environment.description}:`, error.message);
+    console.error(
+      `❌ Failed to set commands for ${environment.description}:`,
+      error.message
+    );
     return false;
   }
 }
@@ -169,18 +174,24 @@ async function main() {
       const success = await setBotCommands(botToken, env);
       if (success) successCount++;
     } catch (error) {
-      console.error(`❌ Failed to get token for ${env.description}: ${error.message}`);
+      console.error(
+        `❌ Failed to get token for ${env.description}: ${error.message}`
+      );
     }
   }
 
   console.log('📊 Summary:');
-  console.log(`✅ Successfully updated: ${successCount}/${environmentsToUpdate.length} bots`);
+  console.log(
+    `✅ Successfully updated: ${successCount}/${environmentsToUpdate.length} bots`
+  );
   console.log('');
 
   if (successCount === environmentsToUpdate.length) {
     console.log('🎉 All bot commands updated successfully!');
   } else {
-    console.log('⚠️ Some bot commands failed to update. Check the errors above.');
+    console.log(
+      '⚠️ Some bot commands failed to update. Check the errors above.'
+    );
     process.exit(1);
   }
 }
