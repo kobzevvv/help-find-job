@@ -47,8 +47,8 @@ export class ConversationHandler {
     try {
       // Log the message
       await this.loggingService.logUserMessage(
-          userId,
-          chatId,
+        userId,
+        chatId,
         message.text || 'document',
         {
           messageId: message.message_id,
@@ -97,7 +97,7 @@ export class ConversationHandler {
 
     switch (state) {
       case 'collecting_resume':
-          await this.handleResumeText(text, chatId, userId);
+        await this.handleResumeText(text, chatId, userId);
         break;
 
       case 'collecting_job_ad':
@@ -105,8 +105,8 @@ export class ConversationHandler {
         break;
 
       default:
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
           text: 'Используйте команды /send_resume или /send_job_ad для начала.',
         });
     }
@@ -214,8 +214,8 @@ export class ConversationHandler {
     // Set state to collecting job ad
     await this.sessionService.updateState(userId, 'collecting_job_ad');
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '💼 Отправьте текст вакансии. Можно отправить в нескольких сообщениях или прикрепить PDF файл.\n\nКогда закончите, скажите "готово".',
     });
   }
@@ -231,25 +231,25 @@ export class ConversationHandler {
     // Check if this is a "done" command
     if (['готово', 'done', 'готов', 'ok'].includes(text.trim().toLowerCase())) {
       await this.sessionService.updateState(userId, 'idle');
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '✅ Резюме получено! Используйте /send_job_ad для отправки вакансии.',
-        });
-        return;
-      }
+      });
+      return;
+    }
 
     // Append text to resume
     await this.sessionService.appendResumeText(userId, text);
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '✅ Добавлено к резюме. Продолжайте или нажмите кнопку:',
-        reply_markup: {
-          inline_keyboard: [
+      reply_markup: {
+        inline_keyboard: [
           [{ text: '✅ Готово с резюме', callback_data: 'resume_done' }],
-          ],
-        },
-      });
+        ],
+      },
+    });
   }
 
   /**
@@ -263,18 +263,18 @@ export class ConversationHandler {
     // Check if this is a "done" command
     if (['готово', 'done', 'готов', 'ok'].includes(text.trim().toLowerCase())) {
       await this.sessionService.updateState(userId, 'idle');
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '✅ Вакансия получена! Теперь вы можете начать новую сессию.',
-        });
-        return;
-      }
+      });
+      return;
+    }
 
     // Append text to job ad
     await this.sessionService.appendJobAdText(userId, text);
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: '✅ Добавлено к вакансии. Продолжайте или нажмите кнопку:',
       reply_markup: {
         inline_keyboard: [
@@ -344,8 +344,8 @@ export class ConversationHandler {
       );
     } catch (error) {
       console.error('Error in admin log command:', error);
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '❌ Error retrieving logs. Please try again.',
       });
     }
@@ -383,24 +383,24 @@ export class ConversationHandler {
         providedPassword === this.adminPassword;
 
       if (!isAuthorized) {
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
           text: this.getInvalidPasswordMessage(),
         });
         return;
       }
 
       // Send "loading" message
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '📊 Generating log summary...',
       });
 
       // Get log summary (24 hours)
       const summary = await this.loggingService.getAdminLogSummary(24);
 
-    await this.telegramService.sendMessage({
-      chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: summary,
       });
 
@@ -465,8 +465,8 @@ export class ConversationHandler {
 
     // Check file size (limit to 10MB)
     if (fileSize > 10 * 1024 * 1024) {
-        await this.telegramService.sendMessage({
-          chat_id: chatId,
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
         text: '❌ Файл слишком большой. Максимальный размер: 10MB.',
       });
       return;
@@ -496,7 +496,7 @@ export class ConversationHandler {
 
       // Send processing message
       await this.telegramService.sendMessage({
-          chat_id: chatId,
+        chat_id: chatId,
         text: `⏳ Обрабатываю файл ${fileName}...`,
       });
 
@@ -524,7 +524,7 @@ export class ConversationHandler {
       if (state === 'collecting_resume') {
         await this.sessionService.appendResumeText(userId, extractedText);
         await this.telegramService.sendMessage({
-        chat_id: chatId,
+          chat_id: chatId,
           text: `✅ PDF "${fileName}" обработан (${extractedText.length} символов).\nПродолжайте или нажмите кнопку:`,
           reply_markup: {
             inline_keyboard: [
@@ -573,7 +573,11 @@ export class ConversationHandler {
 
       // Use Cloudflare AI for PDF text extraction
       // Using @cf/unum/uform-gen2-qwen-500m for document understanding
-      const response = await (this.ai as { run: (model: string, input: unknown) => Promise<{ response: string }> }).run('@cf/unum/uform-gen2-qwen-500m', {
+      const response = await (
+        this.ai as {
+          run: (model: string, input: unknown) => Promise<{ response: string }>;
+        }
+      ).run('@cf/unum/uform-gen2-qwen-500m', {
         image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
         prompt:
           'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
@@ -606,9 +610,9 @@ export class ConversationHandler {
 
     const fullMessage = baseMessage + adminCommands;
 
-      await this.telegramService.sendMessage({
-        chat_id: chatId,
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
       text: fullMessage,
-      });
+    });
   }
 }
