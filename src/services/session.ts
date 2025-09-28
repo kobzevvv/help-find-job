@@ -2,7 +2,8 @@
  * Simplified user session management service
  */
 
-import { UserSession, ConversationState } from '../types/session';
+import { ConversationState, UserSession } from '../types/session';
+import { StructuredResumeData } from './resume-processor';
 
 export class SessionService {
   private kv: KVNamespace;
@@ -134,6 +135,32 @@ export class SessionService {
     delete session.jobAdText;
     session.state = 'idle';
     return await this.saveSession(session);
+  }
+
+  /**
+   * Save structured resume data
+   */
+  async saveStructuredResume(
+    userId: number,
+    structuredResume: StructuredResumeData
+  ): Promise<boolean> {
+    const session = await this.getSession(userId);
+    if (!session) {
+      return false;
+    }
+
+    session.structuredResume = structuredResume;
+    return await this.saveSession(session);
+  }
+
+  /**
+   * Get structured resume data for user
+   */
+  async getStructuredResume(
+    userId: number
+  ): Promise<StructuredResumeData | null> {
+    const session = await this.getSession(userId);
+    return session?.structuredResume || null;
   }
 
   /**

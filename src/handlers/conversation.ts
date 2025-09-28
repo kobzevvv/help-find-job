@@ -4,6 +4,7 @@
  */
 
 import { LoggingService } from '../services/logging';
+import { ResumeProcessorService } from '../services/resume-processor';
 import { SessionService } from '../services/session';
 import { TelegramService } from '../services/telegram';
 import { TelegramMessage } from '../types/telegram';
@@ -12,17 +13,20 @@ export class ConversationHandler {
   private sessionService: SessionService;
   private telegramService: TelegramService;
   private loggingService: LoggingService;
-  private ai: any; // Cloudflare AI binding
+  private resumeProcessorService: ResumeProcessorService;
+  private ai: unknown; // Cloudflare AI binding
 
   constructor(
     sessionService: SessionService,
     telegramService: TelegramService,
     loggingService: LoggingService,
-    ai?: any
+    resumeProcessorService: ResumeProcessorService,
+    ai?: unknown
   ) {
     this.sessionService = sessionService;
     this.telegramService = telegramService;
     this.loggingService = loggingService;
+    this.resumeProcessorService = resumeProcessorService;
     this.ai = ai;
   }
 
@@ -132,6 +136,11 @@ export class ConversationHandler {
 
       case '/send_job_ad':
         await this.startJobAdCollection(chatId, userId);
+        break;
+
+      case '/structure_my_resume':
+      case '/structure_resume':
+        await this.structureResume(chatId, userId);
         break;
 
       case '/get_logs':
@@ -412,11 +421,14 @@ export class ConversationHandler {
 
       // Use Cloudflare AI for PDF text extraction
       // Using @cf/unum/uform-gen2-qwen-500m for document understanding
-      const response = await this.ai.run('@cf/unum/uform-gen2-qwen-500m', {
-        image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
-        prompt:
-          'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
-      });
+      const response = await (this.ai as any).run(
+        '@cf/unum/uform-gen2-qwen-500m',
+        {
+          image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
+          prompt:
+            'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
+        }
+      );
 
       if (response && response.description) {
         return response.description;
@@ -433,12 +445,171 @@ export class ConversationHandler {
   }
 
   /**
+   * Structure resume using external service
+   */
+  private async structureResume(chatId: number, userId: number): Promise<void> {
+    try {
+      // Check if user has resume text
+      const resumeText = await this.sessionService.getResumeText(userId);
+
+      if (!resumeText || resumeText.trim().length === 0) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: '❌ У вас нет сохраненного резюме. Сначала используйте команду /send_resume для отправки резюме.',
+        });
+        return;
+      }
+
+      // Check if resume text is long enough
+      if (resumeText.trim().length < 200) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: '❌ Текст резюме слишком короткий для структурирования.\n\n**Рекомендации:**\n• Добавьте разделы: "Опыт работы", "Навыки", "Желаемая позиция"\n• Опишите ваши обязанности и достижения\n• Укажите технологии и инструменты, которыми владеете\n• Минимум 200 символов для качественного анализа',
+          parse_mode: 'Markdown',
+        });
+        return;
+      }
+
+      // Send processing message
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '⏳ Обрабатываю ваше резюме... Это может занять несколько секунд.',
+      });
+
+      // Process resume with aggressive timeout (skip health check for now)
+      console.log('Starting resume processing with timeout...');
+      
+      const result = await Promise.race([
+        this.resumeProcessorService.processResume(resumeText, 'ru'),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => {
+              console.log('Processing timeout triggered');
+              reject(new Error('Processing timeout - service took too long'));
+            },
+            15000 // Reduced to 15 seconds
+          )
+        ),
+      ]);
+
+      if (!result.success) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: `❌ Не удалось структурировать резюме:\n${result.errors.join('\n')}`,
+        });
+        return;
+      }
+
+      if (!result.data) {
+        let errorMessage =
+          '❌ Не удалось получить структурированные данные из резюме.\n\n';
+        if (result.errors && result.errors.length > 0) {
+          errorMessage += '**Проблемы с резюме:**\n';
+          result.errors.forEach((error) => {
+            errorMessage += `• ${error}\n`;
+          });
+          errorMessage += '\n**Рекомендации:**\n';
+          errorMessage +=
+            '• Убедитесь, что резюме содержит разделы: "Опыт работы", "Навыки", "Желаемая позиция"\n';
+          errorMessage += '• Добавьте больше деталей о вашем опыте и навыках\n';
+          errorMessage += '• Укажите желаемую должность в резюме';
+        }
+
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: errorMessage,
+          parse_mode: 'Markdown',
+        });
+        return;
+      }
+
+      // Save structured resume to session
+      await this.sessionService.saveStructuredResume(userId, result.data);
+
+      // Format and send the structured resume
+      const formattedResume =
+        this.resumeProcessorService.formatStructuredResume(result.data);
+
+      // Split message if too long (Telegram limit is 4096 characters)
+      const maxLength = 4000; // Leave some buffer
+      if (formattedResume.length <= maxLength) {
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: formattedResume,
+          parse_mode: 'Markdown',
+        });
+      } else {
+        // Split into chunks
+        const chunks = this.splitMessage(formattedResume, maxLength);
+        for (const chunk of chunks) {
+          await this.telegramService.sendMessage({
+            chat_id: chatId,
+            text: chunk,
+            parse_mode: 'Markdown',
+          });
+        }
+      }
+
+      // Send additional info
+      let additionalInfo = `\n✅ **Резюме успешно структурировано!**\n`;
+      additionalInfo += `⏱️ Время обработки: ${result.processing_time_ms}мс\n`;
+
+      if (result.unmapped_fields && result.unmapped_fields.length > 0) {
+        additionalInfo += `\n⚠️ Не удалось распознать поля: ${result.unmapped_fields.join(', ')}\n`;
+      }
+
+      if (result.metadata) {
+        additionalInfo += `\n🤖 Модель ИИ: ${result.metadata.ai_model_used}`;
+      }
+
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: additionalInfo,
+        parse_mode: 'Markdown',
+      });
+    } catch (error) {
+      console.error('Error structuring resume:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `❌ Произошла ошибка при структурировании резюме: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+      });
+    }
+  }
+
+  /**
+   * Split long message into chunks
+   */
+  private splitMessage(text: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+      if (currentChunk.length + line.length + 1 <= maxLength) {
+        currentChunk += (currentChunk ? '\n' : '') + line;
+      } else {
+        if (currentChunk) {
+          chunks.push(currentChunk);
+        }
+        currentChunk = line;
+      }
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+
+    return chunks;
+  }
+
+  /**
    * Send help message
    */
   private async sendHelpMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/structure_my_resume - структурировать резюме\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
     });
   }
 }
