@@ -40,6 +40,10 @@ const BOT_COMMANDS = [
     description: 'Отправить вакансию',
   },
   {
+    command: 'structure_my_resume',
+    description: 'Структурировать резюме',
+  },
+  {
     command: 'get_logs',
     description: 'Получить логи',
   },
