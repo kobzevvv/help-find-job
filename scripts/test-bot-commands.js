@@ -5,7 +5,11 @@
  * Tests both the API calls and command functionality
  */
 
-const { setBotCommands, BOT_COMMANDS, ENVIRONMENTS } = require('./set-bot-commands');
+const {
+  setBotCommands,
+  BOT_COMMANDS,
+  ENVIRONMENTS,
+} = require('./set-bot-commands');
 
 /**
  * Test command setting functionality
@@ -18,7 +22,7 @@ async function testCommandSetting() {
   const mockToken = '123456789:AAFakeTokenForTestingPurposes123456789';
 
   console.log('📋 Commands to be set:');
-  BOT_COMMANDS.forEach(cmd => {
+  BOT_COMMANDS.forEach((cmd) => {
     console.log(`  /${cmd.command} - ${cmd.description}`);
   });
   console.log('');
@@ -27,14 +31,16 @@ async function testCommandSetting() {
     // This will fail with mock token, but tests the code path
     await setBotCommands(mockToken, ENVIRONMENTS.staging);
   } catch (error) {
-    console.log('✅ Command setting code path works (expected failure with mock token)');
+    console.log(
+      '✅ Command setting code path works (expected failure with mock token)'
+    );
     console.log(`   Error: ${error.message}`);
   }
 
   console.log('');
   console.log('🔍 To test with real tokens:');
-  console.log('  1. Set TELEGRAM_BOT_TOKEN_STAGING environment variable');
-  console.log('  2. Set TELEGRAM_BOT_TOKEN_PRODUCTION environment variable');
+  console.log('  1. Set TELEGRAM_BOT_STAGING_TOKEN environment variable');
+  console.log('  2. Set TELEGRAM_BOT_PRODUCTION_TOKEN environment variable');
   console.log('  3. Run: npm run commands:set');
   console.log('');
 }
@@ -46,19 +52,19 @@ function testEnvironmentVariables() {
   console.log('🔐 Testing environment variables...');
   console.log('');
 
-  const stagingToken = process.env.TELEGRAM_BOT_TOKEN_STAGING;
-  const productionToken = process.env.TELEGRAM_BOT_TOKEN_PRODUCTION;
+  const stagingToken = process.env.TELEGRAM_BOT_STAGING_TOKEN;
+  const productionToken = process.env.TELEGRAM_BOT_PRODUCTION_TOKEN;
 
   if (stagingToken) {
-    console.log('✅ TELEGRAM_BOT_TOKEN_STAGING is set');
+    console.log('✅ TELEGRAM_BOT_STAGING_TOKEN is set');
   } else {
-    console.log('❌ TELEGRAM_BOT_TOKEN_STAGING is not set');
+    console.log('❌ TELEGRAM_BOT_STAGING_TOKEN is not set');
   }
 
   if (productionToken) {
-    console.log('✅ TELEGRAM_BOT_TOKEN_PRODUCTION is set');
+    console.log('✅ TELEGRAM_BOT_PRODUCTION_TOKEN is set');
   } else {
-    console.log('❌ TELEGRAM_BOT_TOKEN_PRODUCTION is not set');
+    console.log('❌ TELEGRAM_BOT_PRODUCTION_TOKEN is not set');
   }
 
   console.log('');

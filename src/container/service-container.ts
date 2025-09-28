@@ -5,15 +5,16 @@
  * Eliminates complex constructor parameter passing.
  */
 
-import { LoggingService } from '../services/logging';
-import { Env } from '../index';
-import { SessionService } from '../services/session';
-import { TelegramService } from '../services/telegram';
 import { ConversationHandler } from '../handlers/conversation';
 import { WebhookHandler } from '../handlers/webhook';
+import { Env } from '../index';
+import { LoggingService } from '../services/logging';
+import { ResumeProcessorService } from '../services/resume-processor';
+import { SessionService } from '../services/session';
+import { TelegramService } from '../services/telegram';
 
 export interface ServiceFactory<T> {
-  create(container: ServiceContainer, env?: any): Promise<T>;
+  create(container: ServiceContainer, env?: unknown): Promise<T>;
   dependencies: string[];
 }
 
@@ -31,9 +32,9 @@ export class ServiceContainer {
   private factories: Map<string, ServiceFactory<unknown>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
-  private env?: any;
+  private env?: unknown;
 
-  constructor(env?: any) {
+  constructor(env?: unknown) {
     this.env = env;
   }
 
@@ -189,18 +190,29 @@ export async function createServiceContainer(
     },
   });
 
+  // Register Resume Processor service
+  container.register('resumeProcessor', {
+    dependencies: [],
+    async create() {
+      return new ResumeProcessorService();
+    },
+  });
+
   // Register conversation handler
   container.register('conversation', {
-    dependencies: ['session', 'telegram', 'logging'],
+    dependencies: ['session', 'telegram', 'logging', 'resumeProcessor'],
     async create(container) {
       const sessionService = await container.get<SessionService>('session');
       const telegramService = await container.get<TelegramService>('telegram');
       const loggingService = await container.get<LoggingService>('logging');
+      const resumeProcessorService =
+        await container.get<ResumeProcessorService>('resumeProcessor');
 
       return new ConversationHandler(
         sessionService,
         telegramService,
         loggingService,
+        resumeProcessorService,
         env?.AI // Pass AI binding for PDF processing
       );
     },

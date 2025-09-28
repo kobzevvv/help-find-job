@@ -2,7 +2,7 @@ name: Deploy to Staging
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, master, develop]
   workflow_dispatch:
 
 jobs:
@@ -14,57 +14,57 @@ jobs:
       url: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run linting and type checking
-      run: npm run quality
+      - name: Run linting and type checking
+        run: npm run quality
 
-    - name: Run tests
-      run: npm test
+      - name: Run tests
+        run: npm test
 
-    - name: Build project
-      run: npm run build
+      - name: Build project
+        run: npm run build
 
-    - name: Deploy to Cloudflare Workers (Staging)
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        command: deploy --env staging
+      - name: Deploy to Cloudflare Workers (Staging)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env staging
 
-    - name: Wait for deployment stabilization
-      run: sleep 10
+      - name: Wait for deployment stabilization
+        run: sleep 10
 
-    - name: Verify deployment health
-      run: |
-        curl -f https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/health
+      - name: Verify deployment health
+        run: |
+          curl -f https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev/health
 
-    - name: Set Telegram bot commands
-      env:
-        TELEGRAM_BOT_TOKEN_STAGING: ${{ secrets.TELEGRAM_BOT_TOKEN_STAGING }}
-      run: |
-        echo "TELEGRAM_BOT_TOKEN_STAGING=$TELEGRAM_BOT_TOKEN_STAGING" > .env.staging.local
-        npm run telegram-bot-commands staging
+      - name: Set Telegram bot commands
+        env:
+          TELEGRAM_BOT_STAGING_TOKEN: ${{ secrets.TELEGRAM_BOT_STAGING_TOKEN }}
+        run: |
+          echo "TELEGRAM_BOT_STAGING_TOKEN=$TELEGRAM_BOT_STAGING_TOKEN" > .env.staging.local
+          npm run telegram-bot-commands staging
 
-    - name: Post-deployment notification
-      if: success()
-      run: |
-        echo "✅ Staging deployment successful!"
-        echo "🤖 Bot: @job_search_help_staging_bot"
-        echo "🌐 URL: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
+      - name: Post-deployment notification
+        if: success()
+        run: |
+          echo "✅ Staging deployment successful!"
+          echo "🤖 Bot: @job_search_help_staging_bot"
+          echo "🌐 URL: https://help-with-job-search-telegram-bot-staging.vova-likes-smoothy.workers.dev"
 
-    - name: Post-deployment notification (failure)
-      if: failure()
-      run: |
-        echo "❌ Staging deployment failed!"
-        echo "Check the logs above for details."
+      - name: Post-deployment notification (failure)
+        if: failure()
+        run: |
+          echo "❌ Staging deployment failed!"
+          echo "Check the logs above for details."
