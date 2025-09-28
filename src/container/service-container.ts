@@ -13,7 +13,7 @@ import { SessionService } from '../services/session';
 import { TelegramService } from '../services/telegram';
 
 export interface ServiceFactory<T> {
-  create(container: ServiceContainer, env?: any): Promise<T>;
+  create(container: ServiceContainer, env?: unknown): Promise<T>;
   dependencies: string[];
 }
 
@@ -31,9 +31,9 @@ export class ServiceContainer {
   private factories: Map<string, ServiceFactory<unknown>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
-  private env?: any;
+  private env?: unknown;
 
-  constructor(env?: any) {
+  constructor(env?: unknown) {
     this.env = env;
   }
 
