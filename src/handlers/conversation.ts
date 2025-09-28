@@ -114,8 +114,10 @@ export class ConversationHandler {
     chatId: number,
     userId: number
   ): Promise<void> {
+    console.log(`🔍 COMMAND DEBUG: Received command: "${command}"`);
     const parts = command.trim().split(/\s+/);
     const cmd = parts[0]?.toLowerCase() || '';
+    console.log(`🔍 COMMAND DEBUG: Processed command: "${cmd}"`);
 
     switch (cmd) {
       case '/start':
@@ -141,6 +143,10 @@ export class ConversationHandler {
       case '/show_structured_resume_text':
       case '/structure_my_resume':
         await this.showStructuredResume(chatId, userId);
+        break;
+
+      case '/show_raw_text_resume':
+        await this.showRawTextResume(chatId, userId);
         break;
 
       default:
@@ -291,7 +297,7 @@ export class ConversationHandler {
   private async sendWelcomeMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n/help - помощь',
+      text: '👋 Привет!\n\nКоманды:\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_raw_text_resume - показать сырой текст резюме (отладка)\n/get_logs - получить логи\n/help - помощь',
     });
   }
 
@@ -443,7 +449,7 @@ export class ConversationHandler {
   private async sendHelpMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/structure_my_resume - структурировать мое резюме\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/structure_my_resume - структурировать мое резюме\n/show_raw_text_resume - показать сырой текст резюме (отладка)\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
     });
   }
 
@@ -511,6 +517,72 @@ Use emojis and clear sections.`,
         chat_id: chatId,
         text: `❌ Не удалось обработать резюме: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}. Пожалуйста, попробуйте позже.`,
       });
+    }
+  }
+
+  /**
+   * Show raw text resume for debugging
+   */
+  private async showRawTextResume(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
+    console.log(
+      `🔍 SHOW RAW TEXT DEBUG: Starting showRawTextResume for user ${userId}`
+    );
+    const session = await this.sessionService.getSession(userId);
+
+    if (!session || !session.resumeText) {
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Резюме не найдено. Пожалуйста, сначала отправьте резюме используя /send_resume',
+      });
+      return;
+    }
+
+    const rawText = session.resumeText;
+    const textLength = rawText.length;
+    const wordCount = rawText
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
+
+    // Telegram has a 4096 character limit per message, so we need to split long text
+    const maxLength = 4000; // Leave some buffer for formatting
+
+    if (textLength <= maxLength) {
+      // Send the full text in one message
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `🔍 Сырой текст резюме (для отладки)\n\n📊 Статистика:\n• Символов: ${textLength}\n• Слов: ${wordCount}\n\n📄 Текст:\n\n${rawText}`,
+      });
+    } else {
+      // Send statistics first
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `🔍 Сырой текст резюме (для отладки)\n\n📊 Статистика:\n• Символов: ${textLength}\n• Слов: ${wordCount}\n\n⚠️ Текст слишком длинный, отправляю частями...`,
+      });
+
+      // Split text into chunks
+      const chunks = [];
+      for (let i = 0; i < rawText.length; i += maxLength) {
+        chunks.push(rawText.slice(i, i + maxLength));
+      }
+
+      // Send each chunk
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkNumber = i + 1;
+        const totalChunks = chunks.length;
+
+        await this.telegramService.sendMessage({
+          chat_id: chatId,
+          text: `📄 Часть ${chunkNumber}/${totalChunks}:\n\n${chunks[i]}`,
+        });
+
+        // Small delay between messages to avoid rate limiting
+        if (i < chunks.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
     }
   }
 }

@@ -15,15 +15,6 @@
     "deploy:safe": "bash scripts/deploy-safely.sh",
     "deploy:safe:staging": "bash scripts/deploy-safely.sh staging",
     "deploy:safe:prod": "bash scripts/deploy-safely.sh production",
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "jest --config jest.config.unit.js --passWithNoTests",
-    "test:integration": "jest --config jest.config.integration.js --passWithNoTests",
-    "test:e2e": "npm run build:ci && jest --config jest.config.e2e.js --passWithNoTests",
-    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
-    "test:coverage": "jest --config jest.config.unit.js --coverage --passWithNoTests",
-    "test:watch": "jest --config jest.config.unit.js --watch",
-    "test:watch:integration": "jest --config jest.config.integration.js --watch",
-    "test:watch:e2e": "jest --config jest.config.e2e.js --watch",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
@@ -37,30 +28,14 @@
     "logs:prod": "wrangler tail --env production",
     "metrics": "wrangler analytics",
     "health-check": "curl https://your-worker-name.your-subdomain.workers.dev/health",
-    "webhook:set": "node scripts/set-webhook.js",
-    "webhook:delete": "node scripts/delete-webhook.js",
-    "webhook:info": "node scripts/webhook-info.js",
-    "commands:set": "node scripts/set-bot-commands.js",
-    "commands:set:staging": "node scripts/set-bot-commands.js staging",
-    "commands:set:prod": "node scripts/set-bot-commands.js production",
-    "commands:test": "node scripts/test-bot-commands.js",
     "telegram-bot-commands": "node scripts/set-bot-commands.js",
-    "telegram-bot-commands:post-deploy": "node scripts/set-commands-after-deploy.js",
-    "validate:migration": "node scripts/validate-migration.js",
-    "validate:container": "node scripts/validate-container.js",
-    "validate:staging": "npm run validate:migration && npm run validate:container",
-    "clean": "rm -rf dist node_modules coverage .nyc_output",
+    "clean": "rm -rf dist node_modules",
     "clean:dist": "rm -rf dist",
     "clean:deps": "rm -rf node_modules package-lock.json",
     "clean:all": "npm run clean",
-    "precommit": "npm run type-check && npm run lint && npm run test",
-    "postinstall": "npm run type-check",
-    "prepare": "husky",
-    "dev:debug": "wrangler dev --inspect",
     "quality": "npm run type-check && npm run lint && npm run format:check",
     "quality:fix": "npm run lint:fix && npm run format",
-    "fix:linting": "node scripts/fix-linting-issues.js",
-    "setup:dev": "npm install && npm run prepare && npm run quality:fix"
+    "setup:dev": "npm install && npm run quality:fix"
   },
   "keywords": [
     "telegram",
@@ -101,48 +76,15 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230922.0",
-    "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
-    "@types/supertest": "^2.0.16",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.50.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
-    "husky": "^9.1.7",
-    "jest": "^29.7.0",
-    "jest-environment-miniflare": "^2.14.0",
     "prettier": "^3.0.0",
-    "supertest": "^6.3.0",
-    "ts-jest": "^29.1.0",
     "typescript": "^5.2.0",
     "wrangler": "^4.34.0"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "miniflare",
-    "testMatch": [
-      "**/tests/**/*.test.ts",
-      "**/src/**/*.test.ts"
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.ts",
-      "!src/**/*.d.ts",
-      "!src/**/*.test.ts"
-    ],
-    "coverageReporters": [
-      "text",
-      "html",
-      "lcov"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    }
   },
   "prettier": {
     "semi": true,

@@ -5,12 +5,7 @@
  * that analyzes resume-job description compatibility using AI.
  */
 
-import { createServiceContainer } from './container/service-container';
-import { ConversationHandler } from './handlers/conversation';
-import { WebhookHandler } from './handlers/webhook';
-import { LoggingService } from './services/logging';
-import { SessionService } from './services/session';
-import { TelegramService } from './services/telegram';
+import { createServices } from './container/service-container';
 
 export interface Env {
   // Telegram Configuration
@@ -57,31 +52,16 @@ function getWorkerName(environment: string): string {
 // Configuration now handled by service container
 
 /**
- * Initialize services using dependency injection container
+ * Initialize services using simple factory
  */
 async function initializeServices(env: Env) {
-  console.log('🔧 Initializing simplified services...');
+  console.log('🔧 Initializing services...');
 
-  const container = await createServiceContainer(env);
-
-  // Initialize core services
-  const sessionService = await container.get<SessionService>('session');
-  const telegramService = await container.get<TelegramService>('telegram');
-  const loggingService = await container.get<LoggingService>('logging');
-  const conversationHandler =
-    await container.get<ConversationHandler>('conversation');
-  const webhookHandler = await container.get<WebhookHandler>('webhook');
+  const services = await createServices(env);
 
   console.log('✅ All services initialized');
 
-  return {
-    container,
-    sessionService,
-    telegramService,
-    loggingService,
-    conversationHandler,
-    webhookHandler,
-  };
+  return services;
 }
 
 /**
