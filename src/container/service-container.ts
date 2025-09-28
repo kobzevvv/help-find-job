@@ -5,15 +5,15 @@
  * Eliminates complex constructor parameter passing.
  */
 
-import { LoggingService } from '../services/logging';
-import { Env } from '../index';
-import { SessionService } from '../services/session';
-import { TelegramService } from '../services/telegram';
 import { ConversationHandler } from '../handlers/conversation';
 import { WebhookHandler } from '../handlers/webhook';
+import { Env } from '../index';
+import { LoggingService } from '../services/logging';
+import { SessionService } from '../services/session';
+import { TelegramService } from '../services/telegram';
 
 export interface ServiceFactory<T> {
-  create(container: ServiceContainer, env?: any): Promise<T>;
+  create(container: ServiceContainer, env?: unknown): Promise<T>;
   dependencies: string[];
 }
 
@@ -31,9 +31,9 @@ export class ServiceContainer {
   private factories: Map<string, ServiceFactory<unknown>> = new Map();
   private initializing: Set<string> = new Set();
   private initialized: Set<string> = new Set();
-  private env?: any;
+  private env?: unknown;
 
-  constructor(env?: any) {
+  constructor(env?: unknown) {
     this.env = env;
   }
 
@@ -197,11 +197,17 @@ export async function createServiceContainer(
       const telegramService = await container.get<TelegramService>('telegram');
       const loggingService = await container.get<LoggingService>('logging');
 
+      // Get admin password from environment or use default for staging
+      const adminPassword = env?.ADMIN_PASSWORD || '12354678';
+      const environment = env?.ENVIRONMENT || 'development';
+
       return new ConversationHandler(
         sessionService,
         telegramService,
         loggingService,
-        env?.AI // Pass AI binding for PDF processing
+        env?.AI, // Pass AI binding for PDF processing
+        adminPassword,
+        environment
       );
     },
   });

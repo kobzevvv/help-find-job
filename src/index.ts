@@ -19,11 +19,14 @@ export interface Env {
   // Cloudflare Workers Configuration
   SESSIONS: KVNamespace;
   LOGS_DB?: D1Database;
-  AI?: any; // Cloudflare AI binding for PDF processing
+  AI?: unknown; // Cloudflare AI binding for PDF processing
 
   // Environment Configuration
   ENVIRONMENT?: string;
   WEBHOOK_SECRET?: string;
+
+  // Admin Configuration
+  ADMIN_PASSWORD?: string;
 }
 
 /**
