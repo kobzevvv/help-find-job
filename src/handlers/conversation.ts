@@ -138,6 +138,10 @@ export class ConversationHandler {
         await this.sendLogs(chatId);
         break;
 
+      case '/show_structured_resume_text':
+        await this.showStructuredResume(chatId, userId);
+        break;
+
       default:
         await this.sendHelpMessage(chatId);
     }
@@ -438,7 +442,74 @@ export class ConversationHandler {
   private async sendHelpMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
     });
+  }
+
+  /**
+   * Show structured resume text
+   */
+  private async showStructuredResume(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
+    const session = await this.sessionService.getSession(userId);
+    if (!session || !session.resumeText) {
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Резюме не найдено. Пожалуйста, сначала отправьте резюме используя /send_resume',
+      });
+      return;
+    }
+
+    // Process the resume text to extract structured information
+    await this.telegramService.sendMessage({
+      chat_id: chatId,
+      text: '⏳ Обрабатываю ваше резюме... Это может занять несколько секунд.',
+    });
+
+    try {
+      // Use AI to extract structured information
+      if (!this.ai) {
+        throw new Error('AI service not available');
+      }
+
+      const response = await this.ai.run('@cf/meta/llama-3.1-8b-instruct', {
+        messages: [
+          {
+            role: 'user',
+            content: `Extract and structure the following information from this resume in Russian:
+
+${session.resumeText}
+
+Please format the response with:
+1. 🎯 Желаемые позиции: (desired positions)
+2. 📝 Краткое резюме: (brief summary)
+3. 🛠️ Навыки: (skills with proficiency levels)
+4. 💼 Опыт работы: (work experience with dates and responsibilities)
+
+Use emojis and clear sections.`,
+          },
+        ],
+      });
+
+      if (!response || !response.response) {
+        throw new Error('Failed to process resume');
+      }
+
+      const structuredMessage = response.response;
+
+      // Send the structured resume with a header
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `📋 Структурированное резюме:\n\n${structuredMessage}`,
+      });
+    } catch (error) {
+      console.error('Error processing resume:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: `❌ Не удалось обработать резюме: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}. Пожалуйста, попробуйте позже.`,
+      });
+    }
   }
 }
