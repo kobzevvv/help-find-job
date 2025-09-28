@@ -47,6 +47,10 @@ const BOT_COMMANDS = [
     command: 'show_structured_resume_text',
     description: 'Показать структурированное резюме',
   },
+  {
+    command: 'structure_my_resume',
+    description: 'Структурировать мое резюме',
+  },
 ];
 
 // Environment configuration

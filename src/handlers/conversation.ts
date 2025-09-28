@@ -139,6 +139,7 @@ export class ConversationHandler {
         break;
 
       case '/show_structured_resume_text':
+      case '/structure_my_resume':
         await this.showStructuredResume(chatId, userId);
         break;
 
@@ -442,7 +443,7 @@ export class ConversationHandler {
   private async sendHelpMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/structure_my_resume - структурировать мое резюме\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
     });
   }
 
