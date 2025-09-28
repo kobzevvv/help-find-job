@@ -2,7 +2,7 @@
  * Simplified user session management service
  */
 
-import { UserSession, ConversationState } from '../types/session';
+import { ConversationState, UserSession } from '../types/session';
 
 export class SessionService {
   private kv: KVNamespace;

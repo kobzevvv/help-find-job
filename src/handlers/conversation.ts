@@ -431,19 +431,21 @@ export class ConversationHandler {
       try {
         // First try with a more robust model
         response = await this.ai.run('@cf/meta/llama-3.1-8b-instruct', {
-          messages: [{
-            role: 'user',
-            content: `Extract all text content from this PDF document. Include all readable text, maintaining the original structure and formatting as much as possible. Document: ${fileName}`
-          }]
+          messages: [
+            {
+              role: 'user',
+              content: `Extract all text content from this PDF document. Include all readable text, maintaining the original structure and formatting as much as possible. Document: ${fileName}`,
+            },
+          ],
         });
-        
+
         if (response && response.response) {
           return response.response;
         }
       } catch (error) {
         console.log('First model failed, trying alternative...');
       }
-      
+
       // Fallback to original model
       response = await this.ai.run('@cf/unum/uform-gen2-qwen-500m', {
         image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
@@ -611,14 +613,11 @@ Use emojis and clear sections.`,
   /**
    * Clear resume data for debugging
    */
-  private async clearResumeData(
-    chatId: number,
-    userId: number
-  ): Promise<void> {
+  private async clearResumeData(chatId: number, userId: number): Promise<void> {
     try {
       // Clear resume text from session
       await this.sessionService.clearResumeText(userId);
-      
+
       await this.telegramService.sendMessage({
         chat_id: chatId,
         text: '🗑️ Данные резюме очищены. Теперь вы можете загрузить новое резюме с помощью /send_resume',
