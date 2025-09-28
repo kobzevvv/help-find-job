@@ -149,6 +149,10 @@ export class ConversationHandler {
         await this.showRawTextResume(chatId, userId);
         break;
 
+      case '/clear_resume':
+        await this.clearResumeData(chatId, userId);
+        break;
+
       default:
         await this.sendHelpMessage(chatId);
     }
@@ -422,8 +426,26 @@ export class ConversationHandler {
       );
 
       // Use Cloudflare AI for PDF text extraction
-      // Using @cf/unum/uform-gen2-qwen-500m for document understanding
-      const response = await this.ai.run('@cf/unum/uform-gen2-qwen-500m', {
+      // Try multiple models for better PDF processing
+      let response;
+      try {
+        // First try with a more robust model
+        response = await this.ai.run('@cf/meta/llama-3.1-8b-instruct', {
+          messages: [{
+            role: 'user',
+            content: `Extract all text content from this PDF document. Include all readable text, maintaining the original structure and formatting as much as possible. Document: ${fileName}`
+          }]
+        });
+        
+        if (response && response.response) {
+          return response.response;
+        }
+      } catch (error) {
+        console.log('First model failed, trying alternative...');
+      }
+      
+      // Fallback to original model
+      response = await this.ai.run('@cf/unum/uform-gen2-qwen-500m', {
         image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
         prompt:
           'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
@@ -583,6 +605,30 @@ Use emojis and clear sections.`,
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
+    }
+  }
+
+  /**
+   * Clear resume data for debugging
+   */
+  private async clearResumeData(
+    chatId: number,
+    userId: number
+  ): Promise<void> {
+    try {
+      // Clear resume text from session
+      await this.sessionService.clearResumeText(userId);
+      
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '🗑️ Данные резюме очищены. Теперь вы можете загрузить новое резюме с помощью /send_resume',
+      });
+    } catch (error) {
+      console.error('Error clearing resume data:', error);
+      await this.telegramService.sendMessage({
+        chat_id: chatId,
+        text: '❌ Не удалось очистить данные резюме.',
+      });
     }
   }
 }

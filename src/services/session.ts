@@ -148,4 +148,22 @@ export class SessionService {
       return false;
     }
   }
+
+  /**
+   * Clear resume text from session
+   */
+  async clearResumeText(userId: number): Promise<boolean> {
+    try {
+      const session = await this.getSession(userId);
+      if (session) {
+        session.resumeText = '';
+        await this.saveSession(session);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error clearing resume text:', error);
+      return false;
+    }
+  }
 }

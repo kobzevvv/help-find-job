@@ -14,7 +14,7 @@ const targetEnvironment = process.argv[2]; // staging, production, or undefined 
 if (targetEnvironment === 'staging') {
   require('dotenv').config({ path: '.env.staging' });
 } else if (targetEnvironment === 'production') {
-  require('dotenv').config({ path: '.env' });
+  require('dotenv').config({ path: '.env.production' });
 } else {
   // For both environments, load both files (staging takes precedence for conflicts)
   require('dotenv').config({ path: '.env' });
@@ -55,6 +55,10 @@ const BOT_COMMANDS = [
     command: 'show_raw_text_resume',
     description: 'Показать сырой текст резюме (отладка)',
   },
+  {
+    command: 'clear_resume',
+    description: 'Очистить данные резюме',
+  },
 ];
 
 // Environment configuration
@@ -67,7 +71,7 @@ const ENVIRONMENTS = {
   },
   production: {
     name: 'production',
-    botTokenEnv: 'TELEGRAM_BOT_TOKEN_PRODUCTION',
+    botTokenEnv: 'TELEGRAM_BOT_PRODUCTION_TOKEN',
     botUsername: 'job_search_help_bot',
     description: 'Production bot',
   },

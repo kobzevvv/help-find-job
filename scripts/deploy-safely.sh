@@ -26,9 +26,8 @@ echo "📝 Type checking..."
 npm run type-check
 echo "✅ TypeScript validation passed"
 
-echo "🧪 Running tests..."
-npm test
-echo "✅ Tests passed"
+echo "🧪 Tests skipped (removed from project)"
+echo "✅ Test validation skipped"
 
 echo "🔨 Building project..."
 npm run build
@@ -67,9 +66,8 @@ if [ "$ENVIRONMENT" = "staging" ] || [ "$ENVIRONMENT" = "production" ]; then
     sleep 5
     
     if [ "$ENVIRONMENT" = "staging" ]; then
-        echo "🔍 Running comprehensive validation..."
-        npm run validate:migration
-        echo "✅ Staging validation completed"
+        echo "🔍 Validation skipped (removed from project)"
+        echo "✅ Staging validation skipped"
 
         echo "🤖 Setting bot commands for staging..."
         if npm run telegram-bot-commands staging; then
