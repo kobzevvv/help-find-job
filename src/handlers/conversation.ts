@@ -421,17 +421,18 @@ export class ConversationHandler {
 
       // Use Cloudflare AI for PDF text extraction
       // Using @cf/unum/uform-gen2-qwen-500m for document understanding
-      const response = await (this.ai as any).run(
-        '@cf/unum/uform-gen2-qwen-500m',
-        {
-          image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
-          prompt:
-            'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
+      const response = await (
+        this.ai as {
+          run: (model: string, input: unknown) => Promise<{ response: string }>;
         }
-      );
+      ).run('@cf/unum/uform-gen2-qwen-500m', {
+        image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
+        prompt:
+          'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
+      });
 
-      if (response && response.description) {
-        return response.description;
+      if (response && response.response) {
+        return response.response;
       }
 
       // If AI response doesn't have expected format, return a basic message
@@ -478,7 +479,7 @@ export class ConversationHandler {
 
       // Process resume with aggressive timeout (skip health check for now)
       console.log('Starting resume processing with timeout...');
-      
+
       const result = await Promise.race([
         this.resumeProcessorService.processResume(resumeText, 'ru'),
         new Promise<never>((_, reject) =>
