@@ -408,62 +408,33 @@ export class ConversationHandler {
   }
 
   /**
-   * Process PDF file using Cloudflare AI
+   * Process PDF file - simplified approach
    */
   private async processPDFFile(
     fileContent: ArrayBuffer,
     fileName: string
   ): Promise<string> {
     try {
-      if (!this.ai) {
-        // Fallback if AI is not available
-        console.warn('AI binding not available, using fallback PDF processing');
-        return `PDF файл "${fileName}" принят. Размер: ${Math.round(fileContent.byteLength / 1024)} KB. Для извлечения текста требуется настройка ИИ.`;
-      }
-
       console.log(
-        `Processing PDF: ${fileName}, size: ${fileContent.byteLength} bytes`
+        `PDF received: ${fileName}, size: ${fileContent.byteLength} bytes`
       );
 
-      // Use Cloudflare AI for PDF text extraction
-      // Try multiple models for better PDF processing
-      let response;
-      try {
-        // First try with a more robust model
-        response = await this.ai.run('@cf/meta/llama-3.1-8b-instruct', {
-          messages: [
-            {
-              role: 'user',
-              content: `Extract all text content from this PDF document. Include all readable text, maintaining the original structure and formatting as much as possible. Document: ${fileName}`,
-            },
-          ],
-        });
+      // For now, we'll ask users to send text instead of PDFs
+      // This is more reliable than trying to process PDFs with AI
+      return `📄 PDF файл "${fileName}" получен (${Math.round(fileContent.byteLength / 1024)} KB).
 
-        if (response && response.response) {
-          return response.response;
-        }
-      } catch (error) {
-        console.log('First model failed, trying alternative...');
-      }
+⚠️ Автоматическое извлечение текста из PDF пока не работает стабильно.
 
-      // Fallback to original model
-      response = await this.ai.run('@cf/unum/uform-gen2-qwen-500m', {
-        image: [...new Uint8Array(fileContent)], // Convert ArrayBuffer to array for AI
-        prompt:
-          'Extract all text content from this document. Include all readable text, maintaining the original structure and formatting as much as possible.',
-      });
+💡 **Рекомендация**: Скопируйте текст из PDF и отправьте его как обычное сообщение.
 
-      if (response && response.description) {
-        return response.description;
-      }
+Или используйте онлайн конвертер:
+• https://smallpdf.com/ru/online-pdf-to-text
+• https://www.ilovepdf.com/ru/pdf_to_text
 
-      // If AI response doesn't have expected format, return a basic message
-      return `PDF файл "${fileName}" обработан. Извлечено ${Math.round(fileContent.byteLength / 1024)} KB данных.`;
+После конвертации просто вставьте текст в чат.`;
     } catch (error) {
       console.error('Error processing PDF:', error);
-
-      // Return a fallback message instead of throwing
-      return `PDF файл "${fileName}" принят, но возникла ошибка при извлечении текста: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}. Попробуйте отправить текст вручную.`;
+      return `PDF файл "${fileName}" принят, но возникла ошибка при обработке. Попробуйте отправить текст вручную.`;
     }
   }
 
@@ -473,7 +444,7 @@ export class ConversationHandler {
   private async sendHelpMessage(chatId: number): Promise<void> {
     await this.telegramService.sendMessage({
       chat_id: chatId,
-      text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/structure_my_resume - структурировать мое резюме\n/show_raw_text_resume - показать сырой текст резюме (отладка)\n/get_logs - получить логи\n\nМожно отправлять текст или PDF файлы.\nЗавершите словом "готово" или кнопкой.',
+        text: '🤖 Команды:\n\n/send_resume - отправить резюме\n/send_job_ad - отправить вакансию\n/show_structured_resume_text - показать структурированное резюме\n/structure_my_resume - структурировать мое резюме\n/show_raw_text_resume - показать сырой текст резюме (отладка)\n/clear_resume - очистить данные резюме\n/get_logs - получить логи\n\n📝 **Рекомендация**: Отправляйте резюме как текст (не PDF) для лучшей обработки.\nЗавершите словом "готово" или кнопкой.',
     });
   }
 
